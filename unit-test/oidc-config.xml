@@ -7,12 +7,12 @@
 
 	<!-- relying parties configuration -->
 	 <relyingParties>
-	 	<relyingParty clientID="bX4v0n2RYsa5a6PIOsK0TipeKvpfyt2B" clientSecret="znnpK1RKhca5yUazHz2ALwdWUHaPjDXM">
-	 		<description>marketwatch web</description>
+	 	<relyingParty clientID="client123" clientSecret="secret123">
+	 		<description>client123</description>
 	 	</relyingParty>
-	 	<relyingParty clientID="test2345" clientSecret="secret1234">
-	 		<description>demoClient</description>
-	 	</relyingParty>	 	
+	 	<relyingParty clientID="client234" clientSecret="secret234">
+	 		<description>client234</description>
+	 	</relyingParty>	
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
