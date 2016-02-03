@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_LOGGING__H_
-#define __DJREWRITE_LOGGING__H_
+#ifndef __TCREWRITE_LOGGING__H_
+#define __TCREWRITE_LOGGING__H_
 
 #include <apr_file_io.h>
 #include "apache_typedefs.h"

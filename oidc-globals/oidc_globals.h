@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_GLOBALS__H_
-#define __DJREWRITE_GLOBALS__H_
+#ifndef __TCREWRITE_GLOBALS__H_
+#define __TCREWRITE_GLOBALS__H_
 
 	//Exposed functions for the Enable unnamed shared memory flag.
 	void djrglobals_setEnableUnnamedSHM(const char * arg);

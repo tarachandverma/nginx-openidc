@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_ACTION_MAPPINGS__H_
-#define __DJREWRITE_ACTION_MAPPINGS__H_
+#ifndef __TCREWRITE_ACTION_MAPPINGS__H_
+#define __TCREWRITE_ACTION_MAPPINGS__H_
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_tables.h>
@@ -212,4 +212,4 @@
 	void oauthutil_printIDToken(pool* p, oauth_jwt* IDToken);
 	const char* oauthutil_serializeJWTClaimNoEncoding(pool* p, oauth_jwt_claim* claim);
 
-#endif //__DJREWRITE_ACTION_MAPPINGS__H_
+#endif //__TCREWRITE_ACTION_MAPPINGS__H_

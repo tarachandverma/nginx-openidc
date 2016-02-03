@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_ACTION_MAPPINGS_XML__H_
-#define __DJREWRITE_ACTION_MAPPINGS_XML__H_
+#ifndef __TCREWRITE_ACTION_MAPPINGS_XML__H_
+#define __TCREWRITE_ACTION_MAPPINGS_XML__H_
 #include "apache_typedefs.h"
 #include "oidc_core_constants.h"
 #include "cookie.h"

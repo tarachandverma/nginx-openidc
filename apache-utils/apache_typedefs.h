@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_APACHE_TYPEDEFS__H_
-#define __DJREWRITE_APACHE_TYPEDEFS__H_
+#ifndef __TCREWRITE_APACHE_TYPEDEFS__H_
+#define __TCREWRITE_APACHE_TYPEDEFS__H_
  
 #include <apr_network_io.h>
 #include <apr_strings.h>

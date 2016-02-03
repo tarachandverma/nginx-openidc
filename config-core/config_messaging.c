@@ -10,7 +10,7 @@
 #include <http-utils/http_client.h>
 #include "xml_core.h"
 
-#ifdef NGX_HTTP_DJREWRITE
+#ifdef NGX_HTTP_OPENIDC
 #else // APACHE
 	#include <ap_mpm.h>
 #endif
@@ -163,7 +163,7 @@
 	pool* root_mpr_pool = NULL;	// root process pool created by root process
 	void cfgm_startMessagingProcess(djrewrite_messaging_proc_rec*msg,int disableProcessRecovery);
 
-#if 0/*APR_HAS_OTHER_CHILD && !NGX_HTTP_DJREWRITE*/
+#if 0/*APR_HAS_OTHER_CHILD && !NGX_HTTP_OPENIDC*/
 	static void cfgm_messageProcessRestartCallback(int reason, void *data, apr_wait_t status) {
 		djrewrite_messaging_proc_rec* mpr = (djrewrite_messaging_proc_rec*)data;
 		int mpm_state;
@@ -226,7 +226,7 @@
 		}else{
 			apr_pool_note_subprocess (root_mpr_pool,mpr->proc,APR_KILL_AFTER_TIMEOUT);
 			if ( !disableProcessRecovery ) {
-			#if 0/*APR_HAS_OTHER_CHILD && !NGX_HTTP_DJREWRITE*/
+			#if 0/*APR_HAS_OTHER_CHILD && !NGX_HTTP_OPENIDC*/
 				apr_proc_other_child_register(mpr->proc, cfgm_messageProcessRestartCallback, mpr, NULL, root_mpr_pool);
 			#endif
 			}

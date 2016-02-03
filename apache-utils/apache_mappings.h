@@ -2,10 +2,10 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_APACHE_MAPPINGS__H_
-#define __DJREWRITE_APACHE_MAPPINGS__H_
+#ifndef __TCREWRITE_APACHE_MAPPINGS__H_
+#define __TCREWRITE_APACHE_MAPPINGS__H_
 
-#ifdef NGX_HTTP_DJREWRITE
+#ifdef NGX_HTTP_OPENIDC
 	#include <ngx_config.h>
 	#include <ngx_core.h>
 	#include <ngx_http.h>

@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_URL_UTILS__H_
-#define __DJREWRITE_URL_UTILS__H_
+#ifndef __TCREWRITE_URL_UTILS__H_
+#define __TCREWRITE_URL_UTILS__H_
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_tables.h>

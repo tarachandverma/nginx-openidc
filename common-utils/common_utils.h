@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_COMMON_UTILS__H_
-#define __DJREWRITE_COMMON_UTILS__H_
+#ifndef __TCREWRITE_COMMON_UTILS__H_
+#define __TCREWRITE_COMMON_UTILS__H_
 #ifdef __cplusplus
 	extern "C" {
 #endif
@@ -110,4 +110,4 @@ int cu_base64urlDecode(apr_pool_t*p, char **dst, const char *src);
 #ifdef __cplusplus
 	}
 #endif
-#endif//__DJREWRITE_COMMON_UTILS__H_
+#endif//__TCREWRITE_COMMON_UTILS__H_

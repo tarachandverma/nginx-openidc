@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_CONFIG_MESSAGING__H_
-#define __DJREWRITE_CONFIG_MESSAGING__H_
+#ifndef __TCREWRITE_CONFIG_MESSAGING__H_
+#define __TCREWRITE_CONFIG_MESSAGING__H_
 
 #include <sys/types.h>
 #include "apache_typedefs.h"

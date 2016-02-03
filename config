@@ -1,11 +1,11 @@
 ngx_addon_name=ngx_http_authz_oidc_module
 
-HTTP_MODULES="$HTTP_MODULES ngx_http_authz_oidc_module"
+HTTP_MODULES="$HTTP_MODULES ngx_http_openidc_module"
 
 apr_dir=/usr/include/apr-1
 apache_inc=/usr/include/apache2
 
-NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_authz_oidc_module.c \
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_openidc_module.c \
 				$ngx_addon_dir/log-utils/logging.c \
 				$ngx_addon_dir/xml-core/token_utils.c \
 				$ngx_addon_dir/xml-core/xml_core.c \
@@ -53,4 +53,4 @@ CORE_LIBS="$CORE_LIBS -lm -ldl -lcurl -lz -lexpat -lapr-1 -laprutil-1 -lpcreposi
 echo "config CFLAGS= $CFLAGS"
 echo "config CORE_LIBS= $CORE_LIBS"
 
-CFLAGS="$CFLAGS -Wno-error -DNGX_HTTP_DJREWRITE -DNGX_DJREWRITE_PCRE"
+CFLAGS="$CFLAGS -Wno-error -DNGX_HTTP_OPENIDC -DNGX_TCREWRITE_PCRE"

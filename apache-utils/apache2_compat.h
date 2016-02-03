@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_APACHE2_COMPAT_H
-#define __DJREWRITE_APACHE2_COMPAT_H
+#ifndef __TCREWRITE_APACHE2_COMPAT_H
+#define __TCREWRITE_APACHE2_COMPAT_H
 
 #include <apr_version.h>
 
@@ -17,4 +17,4 @@ typedef apr_uint32_t 			apr_atomic_t;
 
 #endif // #if APR_MAJOR_VERSION
 
-#endif // #if __DJREWRITE_APACHE2_COMPAT_H
+#endif // #if __TCREWRITE_APACHE2_COMPAT_H

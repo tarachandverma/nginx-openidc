@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_TOKEN_UTILS__H_
-#define __DJREWRITE_TOKEN_UTILS__H_
+#ifndef __TCREWRITE_TOKEN_UTILS__H_
+#define __TCREWRITE_TOKEN_UTILS__H_
 
 #include "apache_typedefs.h"
 

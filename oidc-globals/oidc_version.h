@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/07/14.
  *
  */
-#ifndef __DJREWRITE_VERSION__H_
-#define __DJREWRITE_VERSION__H_
+#ifndef __TCREWRITE_VERSION__H_
+#define __TCREWRITE_VERSION__H_
 
 #include <sys/types.h>
 
@@ -14,7 +14,7 @@
 #define VERSION_ID	MODULE_COMPONENT_ID" "MODULE_VERSION_ID
 
 
-#endif // __DJREWRITE_VERSION__H_
+#endif // __TCREWRITE_VERSION__H_
 
 /*
 ---------------------------------------------------------------------------------------------------

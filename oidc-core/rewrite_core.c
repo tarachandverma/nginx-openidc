@@ -2,7 +2,7 @@
 #include "common_utils.h"
 #include "url_utils.h"
 
-#ifdef NGX_DJREWRITE_PCRE
+#ifdef NGX_TCREWRITE_PCRE
     #include <pcre.h>
 	#include <pcreposix.h>
 	static void * iota_pcre_malloc(size_t size);
@@ -35,7 +35,7 @@
 	#else //#if AP_SERVER_MINORVERSION_NUMBER
 		#include <pcreposix.h>
 	#endif //#ifdef AP_SERVER_MINORVERSION_NUMBER
-#endif //#ifdef NGX_DJREWRITE_PCRE
+#endif //#ifdef NGX_TCREWRITE_PCRE
 		
 			char* rc_getInfo(pool* p){
 				return apr_pstrcat(p,"[",REWRITE_CORE_VERSION,"], PCRE ",pcre_version(),NULL);
@@ -47,13 +47,13 @@
 
 				//do regex match
 				preg=apr_palloc(p,sizeof(regex_t));
-		#ifdef NGX_DJREWRITE_PCRE
-				// set custom pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+				// set custom pcre func for NGX_TCREWRITE_PCRE
 				pool *ip = (pool *) iota_pcre_malloc_init(p);
 		#endif
 				ret=regcomp(preg,regex,0);
 				if(ret!=0){
-		#ifdef NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
 					// reset pcre func for NGX_PCRE
 					iota_pcre_malloc_done(ip);
 		#endif
@@ -63,8 +63,8 @@
 				ret=regexec(preg,value,0,NULL,0);
 				regfree(preg);
 
-		#ifdef NGX_DJREWRITE_PCRE
-				// reset pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+				// reset pcre func for NGX_TCREWRITE_PCRE
 				iota_pcre_malloc_done(ip);
 		#endif
 				return ret;
@@ -77,15 +77,15 @@
 				//do regex match
 				preg=apr_palloc(p,sizeof(regex_t));
 
-		#ifdef NGX_DJREWRITE_PCRE
-				// set custom pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+				// set custom pcre func for NGX_TCREWRITE_PCRE
 				pool *ip = (pool *) iota_pcre_malloc_init(p);
 		#endif
 
 				ret=regcomp(preg,regex,REG_ICASE);
 				if(ret!=0){
-		#ifdef NGX_DJREWRITE_PCRE
-					// reset pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+					// reset pcre func for NGX_TCREWRITE_PCRE
 					iota_pcre_malloc_done(ip);
 		#endif
 					return -555;
@@ -93,8 +93,8 @@
 
 				ret=regexec(preg,value,0,NULL,0);
 				regfree(preg);
-		#ifdef NGX_DJREWRITE_PCRE
-				// reset pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+				// reset pcre func for NGX_TCREWRITE_PCRE
 				iota_pcre_malloc_done(ip);
 		#endif
 				return ret;
@@ -115,15 +115,15 @@
 				//do regex match
 				preg=apr_palloc(p,sizeof(regex_t));
 
-		#ifdef NGX_DJREWRITE_PCRE
-				// set custom pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+				// set custom pcre func for NGX_TCREWRITE_PCRE
 				pool *ip = (pool *) iota_pcre_malloc_init(p);
 		#endif
 
 				ret=regcomp(preg,regex,0);
 				if(ret!=0){
-		#ifdef NGX_DJREWRITE_PCRE
-					// reset pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+					// reset pcre func for NGX_TCREWRITE_PCRE
 					iota_pcre_malloc_done(ip);
 		#endif
 					return -555;
@@ -150,8 +150,8 @@
 				}
 				regfree(preg);
 
-		#ifdef NGX_DJREWRITE_PCRE
-				// reset pcre func for NGX_DJREWRITE_PCRE
+		#ifdef NGX_TCREWRITE_PCRE
+				// reset pcre func for NGX_TCREWRITE_PCRE
 				iota_pcre_malloc_done(ip);
 		#endif
 				return ret;
@@ -199,7 +199,7 @@
 		return 1;
 	}			
 
-#ifdef NGX_DJREWRITE_PCRE
+#ifdef NGX_TCREWRITE_PCRE
 
 pool* iota_pcre_pool=NULL;
 
@@ -269,4 +269,4 @@ static void iota_pcre_malloc_done(pool *old_pool)
     }
 }
 
-#endif /* NGX_DJREWRITE_PCRE */
+#endif /* NGX_TCREWRITE_PCRE */

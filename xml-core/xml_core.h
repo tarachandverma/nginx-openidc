@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_XML_CORE__H_
-#define __DJREWRITE_XML_CORE__H_
+#ifndef __TCREWRITE_XML_CORE__H_
+#define __TCREWRITE_XML_CORE__H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,4 +58,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif	//__DJREWRITE_XML_CORE__H_
+#endif	//__TCREWRITE_XML_CORE__H_

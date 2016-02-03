@@ -2,8 +2,8 @@
  *  Created by Tarachand verma on 01/04/14.
  *
  */
-#ifndef __DJREWRITE_APACHE_MACROS__H_
-#define __DJREWRITE_APACHE_MACROS__H_
+#ifndef __TCREWRITE_APACHE_MACROS__H_
+#define __TCREWRITE_APACHE_MACROS__H_
 
 #define SAFESTR(str) (str!=NULL?str:"NULL")
 #define SAFESTRBLANK(str) (str!=NULL?str:"") 

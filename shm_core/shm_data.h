@@ -1,5 +1,5 @@
-#ifndef __DJREWRITE_SHM_DATA__H_
-#define __DJREWRITE_SHM_DATA__H_
+#ifndef __TCREWRITE_SHM_DATA__H_
+#define __TCREWRITE_SHM_DATA__H_
 
 #include <sys/types.h>
 #include "apache_typedefs.h"

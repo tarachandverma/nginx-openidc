@@ -7,7 +7,7 @@
 #include <http-utils/http_client.h>
 
 #define CONST_PATH_ACTION_DEF_ELTS	4
-#define SHEAP_ITEM_ID_AUTHZ_OIDC	"AUTHZ_OIDC"
+#define SHEAP_ITEM_ID_AUTHZ_OIDC	"NGX_OPENIDC"
 #define KEYBUFFSIZE 8192
 
 	static path_mappings_rec* am_newPathMappingObj(shared_heap* sheap){
