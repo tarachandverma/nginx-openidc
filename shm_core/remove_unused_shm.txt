@@ -1,0 +1,2 @@
+//command
+for shmid in `ipcs -m | awk '{if ($6==0) print $2}'`; do echo $shmid; done

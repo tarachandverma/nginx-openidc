@@ -1,0 +1,180 @@
+CCC=gcc
+CXX=g++
+
+APACHE_UTILS_INC=-I./apache-utils
+
+DEP_EXT_PATH=./dependencies
+DEP_INCLUDE=-I$(DEP_EXT_PATH)/include
+CURL_HOME=$(DEP_EXT_PATH)/curl-7.16.0
+CURL_INC=$(CURL_HOME)/include
+
+URL_UTILS_INC=-I./url-utils
+URL_UTILS_SRC=./url-utils/url_utils.c
+
+#logging
+LOGGING_INC= -I./log-utils
+LOGGING_SRC= ./log-utils/logging.c
+LOGGING_SRC_CXX=
+
+#wsjacl xml xpath extensions
+XML_INC= -I./xml-core
+XML_SRC= ./xml-core/xml_core.c \
+./xml-core/token_utils.c
+
+SERVICE_UTILS_INC= -I./service-utils
+
+SVCMON_INC=-I./service-utils/service-monitor
+SVCMON_SRC= \
+./service-utils/service-monitor/service_template_http.c \
+./service-utils/service-monitor/service_monitor.c
+
+HTTP_UTILS_INC=-I./service-utils/http-utils -I$(CURL_INC)
+HTTP_UTILS_SRC=./service-utils/http-utils/http_client.c
+
+COMMON_UTILS_INC=-I./common-utils
+COMMON_UTILS_SRC_CCC=./common-utils/common_utils.c ./common-utils/cookie.c 
+
+SHM_CORE_INC=-I./shm_core
+SHM_CORE_SRC=./shm_core/shm_dup.c \
+./shm_core/shm_data.c \
+./shm_core/shm_apr.c
+
+DOC_PARSER_CORE_INC=-I./doc-parser-core
+DOC_PARSER_CORE_SRC=./doc-parser-core/doc_parser_utils.c
+
+OIDC_GLOBALS_INC=-I./oidc-globals
+OIDC_GLOBALS_SRC=./oidc-globals/oidc_globals.c
+
+OIDC_CORE_INC=-I./oidc-core
+OIDC_CORE_SRC=./oidc-core/rewrite_core.c \
+./oidc-core/match_list.c \
+./oidc-core/oidc_config_xml.c \
+./oidc-core/oidc_config.c \
+./oidc-core/oidc_config_core.c
+
+CONFIG_CORE_INC=-I./config-core
+CONFIG_CORE_SRC=./config-core/config_bindings.c \
+./config-core/config_bindings_shm.c \
+./config-core/config_messaging_parsing.c
+
+JSON_API_CORE_INC= -I./json-api-core
+JSON_API_CORE_SRC=
+JSON_API_CORE_SRC_CXX=./json-api-core/json_parser.cpp
+
+TEMPLATE_CORE_INC=-I./template-core
+TEMPLATE_CORE_SRC=./template-core/template_engine.c ./template-core/template_handler_url.c
+
+UNIT_TEST_CORE_INC=-I./unit-test
+UNIT_TEST_CORE_SRC=./unit-test/CuTest.c
+
+# add unit test files here
+UNIT_TEST_SRC_CCC= \
+./oidc-core/unit-test/oidc_core_unit_test.c
+
+COMMON_INC=-I. -I.. \
+$(APACHE_UTILS_INC) \
+$(UNIT_TEST_CORE_INC) \
+$(SHM_CORE_INC) \
+$(URL_UTILS_INC) \
+$(XML_INC) \
+$(HTTP_UTILS_INC) \
+$(LOGGING_INC) \
+$(COMMON_UTILS_INC) \
+$(DOC_PARSER_CORE_INC) \
+$(OIDC_GLOBALS_INC) \
+$(OIDC_CORE_INC) \
+$(CONFIG_CORE_INC) \
+$(JSON_API_CORE_INC) \
+$(SERVICE_UTILS_INC) \
+$(SVCMON_INC) \
+$(TEMPLATE_CORE_INC)
+
+CCC_SRC=./unit-test/runalltest.c \
+$(UNIT_TEST_CORE_SRC) \
+$(UNIT_TEST_SRC_CCC) \
+$(SHM_CORE_SRC) \
+$(URL_UTILS_SRC) \
+$(XML_SRC) \
+$(HTTP_UTILS_SRC) \
+$(LOGGING_SRC) \
+$(COMMON_UTILS_SRC_CCC) \
+$(DOC_PARSER_CORE_SRC) \
+$(OIDC_CORE_SRC) \
+$(OIDC_GLOBALS_SRC) \
+$(CONFIG_CORE_SRC) \
+$(JSON_API_CORE_SRC) \
+$(SVCMON_SRC) \
+$(TEMPLATE_CORE_SRC)
+
+CXX_SRC= $(JSON_API_CORE_SRC_CXX)
+
+GCOV_SRC=./unit-test/GCDAProfiling.c
+
+CCC_OBJ = ${CCC_SRC:.c=.o}
+CXX_OBJ = ${CXX_SRC:.cpp=.o}
+
+#macosx specific
+GCOV_OBJ = ${GCOV_SRC:.c=.o}
+
+LBITS := $(shell getconf LONG_BIT)
+
+OSTYPE:= $(shell uname)
+ifeq ($(OSTYPE),Darwin)
+		APR_INC=/usr/include/apr-1
+		APACHE_INC=/usr/include/apache2
+		CFLAGS=-m32 -g -fprofile-arcs -ftest-coverage -Wall -D_REENTRANT -DVERSION_2_2 -DNGX_DJREWRITE_PCRE
+		LDFLAGS=-m32 -L/usr/lib  -lpthread -Bdynamic -lm -ldl -lldap -lcrypto -lssl -lz -lexpat -lcurl -lpcre -lapr-1 -laprutil-1			
+else
+	ifeq ($(LBITS),64)
+		APR_INC=/usr/include/apr-1
+		APACHE_INC=/usr/include/apache2
+		APR_LIB_UTIL=
+		APR_LIB=
+		CFLAGS=-g -fPIC -fprofile-arcs -ftest-coverage -DLINUX=22 -D_REENTRANT -DVERSION_2_2 -DNGX_DJREWRITE_PCRE
+		LDFLAGS=-L/usr/lib64  -lpthread -Bdynamic -lm -luuid -ldl -lssl -lcurl -lz -lpcreposix -lpcre -lapr-1 -laprutil-1 -lstdc++ -lldap -lgcov -lrt
+	else
+		APR_INC=/opt/apache2.0/include
+		APACHE_INC=
+		APR_LIB_UTIL=/opt/apache2.0/lib/libaprutil-0.a
+		APR_LIB=/opt/apache2.0/lib/libapr-0.a
+		CFLAGS=-g -fprofile-arcs -ftest-coverage -DLINUX=22 -D_REENTRANT -DNGX_DJREWRITE_PCRE 
+		LDFLAGS=-L/usr/lib  -lpthread -Bdynamic -lm -lidn -ldl -luuid -lz -lpcreposix -lpcre -lldap_r -llber -lgcov -lrt
+	endif
+endif
+
+all: compile zerocounters run coverage
+
+# clear out all suffixes
+.SUFFIXES:
+
+# list only those we use
+.SUFFIXES: .o .c .cpp
+
+# define a suffix rule for .c -> .o
+.c.o:
+	$(CCC) $(CFLAGS) -I$(APR_INC) -I$(APACHE_INC) $(COMMON_INC) -c $< -o $*.o
+	
+# define a suffix rule for .cpp -> .o
+.cpp.o :
+	$(CXX) $(CFLAGS) -I$(APR_INC) -I$(APACHE_INC) $(COMMON_INC) -c $< -o $*.o
+
+ifeq ($(OSTYPE),Darwin)
+compile: $(CCC_OBJ) $(CXX_OBJ) $(GCOV_OBJ)
+	$(CXX) -o test $(CCC_OBJ) $(CXX_OBJ) $(GCOV_OBJ) $(LDFLAGS)
+else
+compile: $(CCC_OBJ) $(CXX_OBJ)
+	$(CXX) -o test $(CCC_OBJ) $(CXX_OBJ) $(LDFLAGS)
+endif
+
+zerocounters:
+	lcov --directory ./ --zerocounters
+		
+run:
+	./test
+	
+coverage:
+	lcov --directory ./ --capture --output-file unit-test.info
+	genhtml unit-test.info
+	
+clean:
+	rm -f core *.o $(CCC_OBJ) $(CXX_OBJ) *.gcov *.gcno *.gcda test

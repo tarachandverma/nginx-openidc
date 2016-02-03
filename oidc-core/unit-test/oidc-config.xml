@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<oidcConfig>
+	 <rogueHeaders>X-REMOTE-UUID,X-REMOTE-EMAIL</rogueHeaders>
+	 <claimHeaderPrefix>X-REMOTE-</claimHeaderPrefix>
+	 
+	 <oidcProvider>
+	 	<metadataUrl>https://login.dowjones.com/.well-known/openid-configuration</metadataUrl>
+	 </oidcProvider>
+
+	 <relyingParties>
+	 	<relyingParty clientID="test1234" clientSecret="secret1234">
+	 		<description>demoClient1</description>
+	 	</relyingParty>
+	 	<relyingParty clientID="test2345" clientSecret="secret1234">
+	 		<description>demoClient2</description>
+	 	</relyingParty>	 	
+	 </relyingParties>
+	 
+     <pageActions>
+                <action id="oauth2-token-missing">
+                        <description>oauth2-denial</description>
+                        <response code="401" contentType="text/json">{"error":"invalid_request","error_description":"access_token is required"}</response>
+                </action>
+
+	    <action id="oidc_version">
+	        <handler>oidc_version</handler>
+	    </action>
+	    <action id="oidc_config_core_status">
+	        <handler>oidc_config_core_status</handler>
+	    </action>
+	    <action id="oidc_service_monitor_showall">
+	            <handler>oidc_service_monitor_showall</handler>
+	    </action>
+	    <action id="oidc_rewrite_pageactions">
+	        <handler>oidc_rewrite_pageactions</handler>
+	    </action>
+	    <action id="oidc_rewrite_actionmappings">
+	        <handler>oidc_rewrite_actionmappings</handler>
+	    </action>
+	    <action id="oidc_rewrite_match">
+	        <handler>oidc_rewrite_match</handler>
+	    </action>
+	    <action id="oidc_index">
+	        <handler>oidc_index</handler>
+	    </action>     	
+
+	<action id="test-oidc">
+	        <description>This is the simple rewrite 302 redirect</description>
+	        <isForward>false</isForward>
+	        <uri>http://localhost/test-successful</uri>
+	</action>
+	<action id="cob-access-pages" debug="true">
+                <description>cob-access-pages</description>
+                <regex>/auth/group/(.*)</regex>
+                <isForward>false</isForward>
+                <uri>/access/509b1a086458232f6e000002/latest/co_create_standalone.html</uri>
+                <proxy pollseconds="2" alerts="commerce1"> 
+                    <service url="https://id.wsj.com" pollMillis='10000'>
+                              <description>cob pages</description>
+                              <monitor>/auth/auth-api/status</monitor>
+                              <monitor:timeout>3</monitor:timeout>
+                              <timeoutSeconds>10</timeoutSeconds>
+                    </service>
+                </proxy>
+        </action>
+        
+    </pageActions>
+
+	<pathMappings>
+		<mapping path="^/token-test">
+			   <postAuthAction>oauth2-token-missing</postAuthAction>
+		</mapping>
+
+        <mapping path="^/create">
+               <postAuthAction>cob-access-pages</postAuthAction>
+        </mapping>
+
+		<!-- apache handlers to verify oidc information, mainly for debug purpose -->
+	    <mapping path="^/oidc/version">
+	        <postAuthAction>oidc_version</postAuthAction>
+	    </mapping>
+	    <mapping path="^/oidc/config-status">
+	        <postAuthAction>oidc_config_core_status</postAuthAction>
+	    </mapping>
+	    <mapping path="^/oidc/sm_showall">
+	            <postAuthAction>oidc_service_monitor_showall</postAuthAction>
+	    </mapping>
+	    <mapping path="^/oidc/rewrite-pageactions">
+	        <postAuthAction>oidc_rewrite_pageactions</postAuthAction>
+	    </mapping>
+	    <mapping path="^/oidc/rewrite-actionmappings">
+	        <postAuthAction>oidc_rewrite_actionmappings</postAuthAction>
+	    </mapping>
+	    <mapping path="^/oidc/rewrite-match">
+	        <postAuthAction>oidc_rewrite_match</postAuthAction>
+	    </mapping>
+	    <mapping path="^/oidc">
+	        <postAuthAction>oidc_index</postAuthAction>
+	    </mapping> 
+	    <!-- end of debug apache handlers-->
+	        	
+		<!-- temporary redirect 302 -->
+        <mapping path="^/test-oidc">
+                <preAuthAction>test-oidc</preAuthAction>
+        </mapping>
+        
+	</pathMappings>
+</oidcConfig>

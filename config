@@ -1,0 +1,56 @@
+ngx_addon_name=ngx_http_authz_oidc_module
+
+HTTP_MODULES="$HTTP_MODULES ngx_http_authz_oidc_module"
+
+apr_dir=/usr/include/apr-1
+apache_inc=/usr/include/apache2
+
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_authz_oidc_module.c \
+				$ngx_addon_dir/log-utils/logging.c \
+				$ngx_addon_dir/xml-core/token_utils.c \
+				$ngx_addon_dir/xml-core/xml_core.c \
+				$ngx_addon_dir/service-utils/http-utils/http_client.c \
+				$ngx_addon_dir/oidc-core/oidc_config.c \
+				$ngx_addon_dir/oidc-core/oidc_config_core.c \
+				$ngx_addon_dir/oidc-core/oidc_config_xml.c \
+				$ngx_addon_dir/oidc-core/match_list.c \
+				$ngx_addon_dir/oidc-core/rewrite_core.c \
+				$ngx_addon_dir/config-core/config_core.c \
+				$ngx_addon_dir/config-core/config_messaging_parsing.c \
+				$ngx_addon_dir/config-core/config_messaging.c \
+				$ngx_addon_dir/config-core/config_bindings.c \
+				$ngx_addon_dir/config-core/config_bindings_shm.c \
+				$ngx_addon_dir/common-utils/common_utils.c \
+				$ngx_addon_dir/template-core/template_engine.c \
+				$ngx_addon_dir/template-core/template_handler_url.c	\
+				$ngx_addon_dir/doc-parser-core/doc_parser_utils.c \
+				$ngx_addon_dir/shm_core/shm_dup.c \
+				$ngx_addon_dir/shm_core/shm_data.c \
+				$ngx_addon_dir/shm_core/shm_apr.c \
+				$ngx_addon_dir/url-utils/url_utils.c \
+				$ngx_addon_dir/json-api-core/json_parser.cpp \
+				$ngx_addon_dir/oidc-globals/oidc_globals.c \
+				$ngx_addon_dir/common-utils/cookie.c "				
+				
+CORE_INCS="$CORE_INCS $apr_dir $apache_inc $ngx_addon_dir  \
+				$ngx_addon_dir/service-utils \
+				$ngx_addon_dir/apache-utils \
+				$ngx_addon_dir/common-utils \
+				$ngx_addon_dir/url-utils \
+				$ngx_addon_dir/url-utils \
+				$ngx_addon_dir/shm_core \
+				$ngx_addon_dir/log-utils \
+				$ngx_addon_dir/xml-core \
+				$ngx_addon_dir/doc-parser-core \
+				$ngx_addon_dir/template-core \
+				$ngx_addon_dir/config-core \
+				$ngx_addon_dir/oidc-core \
+				$ngx_addon_dir/service-utils/service-monitor \
+				$ngx_addon_dir/oidc-globals \
+				$ngx_addon_dir/json-api-core "				
+CORE_LIBS="$CORE_LIBS -lm -ldl -lcurl -lz -lexpat -lapr-1 -laprutil-1 -lpcreposix -lstdc++"
+
+echo "config CFLAGS= $CFLAGS"
+echo "config CORE_LIBS= $CORE_LIBS"
+
+CFLAGS="$CFLAGS -Wno-error -DNGX_HTTP_DJREWRITE -DNGX_DJREWRITE_PCRE"
