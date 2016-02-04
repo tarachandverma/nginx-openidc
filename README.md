@@ -96,10 +96,10 @@ http {
 	server {
 			...
 			# authorization code flow - exchanging authorization code to id_token(JWT)
-	        location /internal/authZ/token {
-		    internal;
-	            proxy_pass https://www.googleapis.com/oauth2/v4/token;
-	        }
+		    location /internal/oauth2/token {
+		    	internal;
+		        proxy_pass https://www.googleapis.com/oauth2/v4/token;
+		    }
 	}
 ...
 }
@@ -119,19 +119,17 @@ openid-connect configuration : oidc-conf.xml
 	 </oidcProvider>
 
 	<!-- relying parties configuration -->
-	 <relyingParties>
-	 	<relyingParty clientID="client123" clientSecret="secret123" domain=".example1.com" validateNonce="true">
-	 		<description>client 123</description>
+	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
+	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="xxxxxxxxxxx" domain=".com" validateNonce="true">
+	 		<description>nginx oidc demo</description>
+	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
 	 	</relyingParty>
-	 	<relyingParty clientID="client234" clientSecret="secret234" domain=".example2.com" validateNonce="false">
-	 		<description>client 123</description>
-	 	</relyingParty>	 	
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
      <pageActions>
  
-		<!-- nginx-oidc verification handlers -->
+		<!-- nginx authz handlers -->
 	    <action id="oidc_version"><handler>oidc_version</handler></action>
 	    <action id="oidc_config_core_status"><handler>oidc_config_core_status</handler></action>
 	    <action id="oidc_rewrite_pageactions"><handler>oidc_rewrite_pageactions</handler></action>
@@ -146,14 +144,14 @@ openid-connect configuration : oidc-conf.xml
 		    <isForward>false</isForward>
 		    <regex>(.*)</regex>
 			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=id_token&scope=email%2Copenid&client_id=4bf497da4fe0402eb67af22e2fed1877&redirect_uri=http://dev.marketwatch.com/xxxxx&nonce=%{HTTP_X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r]]></uri>
 		</action>
 		<action id="oidc-login2"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
 		    <isForward>false</isForward>
 		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
 		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=id_token&scope=email%2Copenid&client_id=bX4v0n2RYsa5a6PIOsK0TipeKvpfyt2B&redirect_uri=($1U)&nonce=%{X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r]]></uri>
 		</action>
 		<action id="oidc_show_error">
 		    <description>error returned from idp</description>
