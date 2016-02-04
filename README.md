@@ -86,6 +86,35 @@ Specifies custom headers prefix for the claims, default:X-OIDC-
 Specify relying party configuration and custom post Authorization response and rules
 
 
+How to enable ngx openid-connect : nginx.conf
+---------------------------------------------
+`````````````````````
+
+http {
+
+	...
+	OPENIDC_HomeDir                        /opt/nginx-1.8.0/conf/oidc;
+	OPENIDC_LogFile                        oidc-refresh.log;
+	OPENIDC_SharedMemory  file=/config.shm size=61000;
+	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/ngx-openidc/master/example-conf/;
+	OPENIDC_PassPhrase                     abc123;
+	OPENIDC_HeaderPrefix                   X-REMOTE-;
+	OPENIDC_ConfigFile                     oidc-config.xml;
+	
+	server {
+			...
+			# authorization code flow - exchanging authorization code to id_token(JWT)
+	        location /internal/authZ/token {
+		    internal;
+	            proxy_pass https://www.googleapis.com/oauth2/v4/token;
+	        }
+	}
+...
+}
+
+
+`````````````````````
+
 openid-connect configuration : oidc-conf.xml
 -------------------------------------------
 
@@ -204,7 +233,7 @@ Diagnostics
 ---------------------
 
 - Log file path
--  	Startup log - <homeDir>/config-refresh.log
+-  	Startup log - <homeDir>/oidc-refresh.log
 
 
 Authors
