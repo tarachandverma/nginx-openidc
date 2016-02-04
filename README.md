@@ -18,12 +18,6 @@ Features
 - Supports relying party session
 - Removes custom headers from incoming request to ensure these headers are not spoofed.
 
-Initial setup
-------------
-- Apache ActiveMQ : (Only for PUSH method)message broker to send recieve JMS messages for configuration refresh.
-You can download and install Apache ActiveMQ from http://activemq.apache.org/download.html
-- Remote repository : http/https end point to  store and provide switch configuration xml.
-
 Supported platforms
 --------------------------------------
 - All the flavors of *nix platforms, freebsd.
