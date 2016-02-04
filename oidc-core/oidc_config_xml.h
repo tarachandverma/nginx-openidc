@@ -47,6 +47,7 @@
 		char* clientSecret;
 		char* domain;
 		int 	validateNonce;
+		char* redirectUri;
 	}relying_party_xml;
 
 	typedef struct oidc_provider_xml{
@@ -61,6 +62,7 @@
 		Cookie*				rpSession;
 		Cookie*				oidcSession;
 		apr_hash_t* relyingPartyHash;
+		char* defaultRelyingParty;
 		oidc_provider_xml* oidcProvider;
 	}oidc_config_xml;
 	

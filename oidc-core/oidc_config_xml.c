@@ -45,6 +45,7 @@
 		ret->oidcSession=cookie_newObj(p);
 		cookie_setCookieName(p, ret->oidcSession, (char*)"oidc_session");
 		ret->relyingPartyHash=apr_hash_make (p);
+		ret->defaultRelyingParty=NULL;
 		ret->oidcProvider=NULL;
 		return ret;
 	}
@@ -807,7 +808,20 @@
 		ret->description=NULL;
 		ret->domain=NULL;
 		ret->validateNonce=TRUE;
+		ret->redirectUri=NULL;
 		return ret;
+	}
+
+	static int amx_defaultRelyingParty(pool* p,char* xPath,int type,const char ** attributes,void* userdata){
+		int i;
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
+		for(i=0;attributes[i]; i += 2) {
+			if(strcmp(attributes[i],"default")==0){
+				amx->defaultRelyingParty=apr_pstrdup(p,(char*)attributes[i + 1]);
+			}
+		}
+		return 1;
 	}
 
 	static int amx_newRelyingParty(pool* p,char* xPath,int type,const char ** attributes,void* userdata){
@@ -882,7 +896,14 @@
 		}
 		return 1;
 	}
-
+	static int amx_setRelyingPartyRedirectUri(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		relying_party_xml* rpX=(relying_party_xml*)ctmp->tmp14;
+		if(rpX!=NULL&&rpX->redirectUri==NULL){
+			rpX->redirectUri=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
 	static oidc_provider_xml* amx_newOIDCProviderXml(pool* p){
 		oidc_provider_xml* ret;
 		ret=apr_palloc(p,sizeof(oidc_provider_xml));
@@ -967,12 +988,14 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/rpSession",0,cc_setACCSessionCookieAttributes,NULL,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcSession",0,cc_setACCPermCookieAttributes,NULL,NULL, &tmp);
 
+		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties",0,amx_defaultRelyingParty,NULL,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty",0,amx_newRelyingParty,NULL,amx_addRelyingParty, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/clientID",0,NULL,amx_setRelyingPartyClientID,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/description",0,NULL,amx_setRelyingPartyDescription,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/clientSecret",0,NULL,amx_setRelyingPartyClientSecret,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/domain",0,NULL,amx_setRelyingPartyDomain,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/validateNonce",0,NULL,amx_setRelyingPartyValidateNonce,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/redirectUri",0,NULL,amx_setRelyingPartyRedirectUri,NULL, &tmp);
 
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider",0,amx_newOIDCProvider,NULL,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/metadataUrl",0,NULL,amx_setOIDCProviderMetadataUrl,NULL, &tmp);

@@ -26,6 +26,7 @@
 		ret->match_lists=shapr_hash_make(sheap);
 		ret->templateEngine=NULL;
 		ret->relyingPartyHash=shapr_hash_make(sheap);
+		ret->defaultRelyingParty=NULL;
 		return ret;		
 	}
 	
@@ -325,6 +326,7 @@
 		ret->clientSecret=NULL;
 		ret->description=NULL;
 		ret->domain=NULL;
+		ret->redirectUri=NULL;
 		return ret;
 	}
 
@@ -347,6 +349,7 @@
 				rp->clientSecret=shdata_32BitString_copy(sheap,rpX->clientSecret);
 				rp->domain=shdata_32BitString_copy(sheap,rpX->domain);
 				rp->validateNonce = rpX->validateNonce;
+				rp->redirectUri=shdata_32BitString_copy(sheap,rpX->redirectUri);
 				shapr_hash_set(sheap,hash,rp->clientID,APR_HASH_KEY_STRING,rp);
 			}
 		}
@@ -545,6 +548,9 @@
 			cookie_cookieShmDup(sheap,axml->oidcSession);
 
 		am_copyRelyingsParties(p, sheap, axml->relyingPartyHash,ret->relyingPartyHash);
+		if(axml->defaultRelyingParty!=NULL&&ret->relyingPartyHash!=NULL) {
+			ret->defaultRelyingParty = (relying_party*)shapr_hash_get(ret->relyingPartyHash, axml->defaultRelyingParty, APR_HASH_KEY_STRING);
+		}
 
 		shdata_CloseItemTagWithInfo(sheap,"Action Mappings");
 		apr_pool_destroy(subp);

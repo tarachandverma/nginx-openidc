@@ -33,7 +33,7 @@ typedef struct oidc_authz_sub_request_type{
 }oidc_authz_sub_request_type;
 
 oidc_authz_sub_request_type oidc_authz_subrequest_type_oauth_token =
-		{ SUB_REQUEST_TYPE_OAUTH_TOKEN, ngx_string("/internal/authZ/token"), ngx_string("application/x-www-form-urlencoded")};
+		{ SUB_REQUEST_TYPE_OAUTH_TOKEN, ngx_string("/internal/oauth2/token"), ngx_string("application/x-www-form-urlencoded")};
 
 oidc_authz_sub_request_type oidc_authz_subrequest_type_authenticate =
 		{ SUB_REQUEST_TYPE_AUTHENTICATE, ngx_string("/internal/authZ/authenticate"), ngx_string("application/json")};
@@ -2936,6 +2936,9 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
     }else if(url_get_param(url->query, (char*)"code", tmp, OAUTH_IDTOKEN_MAX_SIZE)>0){
 		char* authorizationCode = apr_pstrdup(r->pool, tmp);
 		relying_party* relyingParty = am_getRelyingPartyByHost(r->pool, oidcConfig->relyingPartyHash, r->hostname);
+		if(relyingParty==NULL) {
+			relyingParty = oidcConfig->defaultRelyingParty;
+		}
 		if(relyingParty!=NULL) {
 			char* requestBody = apr_pstrcat(r->pool,
 					"grant_type=authorization_code",
@@ -2943,7 +2946,11 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
 					"&client_id=", relyingParty->clientID,
 					"&client_secret=", relyingParty->clientSecret,
 					NULL);
-
+			if(relyingParty->redirectUri!=NULL) {
+					requestBody = apr_pstrcat(r->pool, requestBody,
+					"&redirect_uri=", relyingParty->redirectUri,
+					NULL);
+			}
 			ngx_int_t rc = ngx_http_openidc_create_post_subrequest(r->httpRequest, oidc_authz_subrequest_type_oauth_token, requestBody);
 			if (rc != NGX_OK) {
 				return rc;
