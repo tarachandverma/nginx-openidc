@@ -35,12 +35,6 @@ typedef struct oidc_authz_sub_request_type{
 oidc_authz_sub_request_type oidc_authz_subrequest_type_oauth_token =
 		{ SUB_REQUEST_TYPE_OAUTH_TOKEN, ngx_string("/internal/oauth2/token"), ngx_string("application/x-www-form-urlencoded")};
 
-oidc_authz_sub_request_type oidc_authz_subrequest_type_authenticate =
-		{ SUB_REQUEST_TYPE_AUTHENTICATE, ngx_string("/internal/authZ/authenticate"), ngx_string("application/json")};
-
-oidc_authz_sub_request_type oidc_authz_subrequest_type_authorize =
-		{ SUB_REQUEST_TYPE_AUTHORIZE, ngx_string("/internal/authZ/authorize"), ngx_string("application/json")};
-
 	#define ALLOC_IF_NULL(r) \
 		{if(r->data==NULL) { r->data = (char*)apr_palloc(r->pool,RBUF_SIZE); memset(r->data,'\0', RBUF_SIZE);}}
 
@@ -138,7 +132,6 @@ static int oidc_config_core_status(ngx_http_openidc_request_t *r, Config *config
 static int oidc_headers(ngx_http_openidc_request_t *r, Config *config);
 static char* ngx_http_openidc_getFullRequestUrl(ngx_http_openidc_request_t* r);
 static ngx_int_t ngx_http_openidc_subrequest_post_handler(ngx_http_request_t *r, void *data, ngx_int_t rc);
-static int ngx_http_openidc_set_id_token_header(ngx_http_request_t* r);
 static ngx_int_t ngx_http_openidc_set_subrequest_post_body(ngx_http_request_t * r, ngx_http_request_t * sr, const char* requestBody, ngx_str_t contentType);
 static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Config* config);
 static ngx_int_t ngx_http_openidc_create_post_subrequest(ngx_http_request_t * r, oidc_authz_sub_request_type sub_request_type, const char* requestBody);
@@ -406,6 +399,7 @@ static void ngx_http_openidc_postConfigStarting(apr_pool_t* p, const char* defn_
 
 		// oidc stuff
 		ccore->passPhrase=apr_pstrdup(p,config->passPhrase);
+		ccore->cipherConfig->crypto_passphrase=ccore->passPhrase;
 		ccore->oidcHeaderPrefix=apr_pstrdup(p,config->oidcHeaderPrefix);
 		ccore->oidcConfigFile=apr_pstrdup(p,config->oidcConfigFile);
 
@@ -1886,6 +1880,8 @@ static ngx_int_t ngx_http_openidc_checkForAccess(ngx_http_request_t *httpRequest
 				}
 			}
 		}
+	}else{
+		apr_table_do(ngx_http_openidc_addResponseHeaderCallback, httpRequest, r->headers_out, NULL);
 	}
 	
 	// release memory
@@ -2735,7 +2731,7 @@ static ngx_int_t ngx_http_openidc_subrequest_post_handler(ngx_http_request_t *r,
 
     char tmp[8192]={0};
     memcpy(tmp, r->upstream->buffer.pos, r->upstream->buffer.last - r->upstream->buffer.pos);
-    printf("%s:%d body=[%s]\n", __FILE__, __LINE__, tmp);
+//    printf("%s:%d body=[%s]\n", __FILE__, __LINE__, tmp);
 
     size_t bodylen = r->upstream->buffer.last - r->upstream->buffer.pos;
     ctx->responseBody.data = ngx_palloc(r->pool, bodylen);
@@ -2743,73 +2739,6 @@ static ngx_int_t ngx_http_openidc_subrequest_post_handler(ngx_http_request_t *r,
     memcpy(ctx->responseBody.data, r->upstream->buffer.pos, bodylen);
 
     return NGX_OK;
-}
-
-static int ngx_http_openidc_set_id_token_header(ngx_http_request_t*	httpRequest){
-
-	// process module context
-	ngx_http_openidc_subrequest_ctx_t* ctx = ngx_http_get_module_ctx(httpRequest, ngx_http_openidc_module);
-    if (ctx != NULL) {
-        if (!ctx->done) {
-            return NGX_AGAIN;
-        }
-
-        if (ctx->status == NGX_HTTP_FORBIDDEN||ctx->status == NGX_HTTP_BAD_REQUEST) {
-            return ctx->status;
-        }
-
-        if (ctx->status == NGX_HTTP_UNAUTHORIZED) {
-        		ngx_http_request_t* sr = ctx->subrequest;
-
-        		ngx_table_elt_t* h = sr->headers_out.www_authenticate;
-
-            if (!h && sr->upstream) {
-                h = sr->upstream->headers_in.www_authenticate;
-            }
-
-            if (h) {
-            		ngx_table_elt_t   *ho = ngx_list_push(&httpRequest->headers_out.headers);
-                if (ho == NULL) {
-                    return NGX_ERROR;
-                }
-
-                *ho = *h;
-
-                httpRequest->headers_out.www_authenticate = ho;
-            }
-
-            return ctx->status;
-        }
-
-        if (ctx->status >= NGX_HTTP_OK && ctx->status < NGX_HTTP_SPECIAL_RESPONSE) {
-        		pool* p = NULL;
-			if(apr_pool_create(&p, mainPool)!=APR_SUCCESS){
-				return NGX_DECLINED;
-			}
-			// read id_token
-            char* responseBody = apr_pstrndup(p, ctx->responseBody.data, ctx->responseBody.len);
-            if(responseBody!=NULL) {
-				Value* json = JSON_Parse(p, responseBody);
-				if(json!=NULL) {
-					Value* idTokenObj = JSON_GetObjectItem(json, "id_token");
-					if(idTokenObj!=NULL) {
-						char* id_token = JSON_GetStringFromStringItem(idTokenObj);
-						if(id_token!=NULL) {
-							ngx_http_openidc_setHeader(httpRequest, "Authorization", apr_pstrcat(p, "Bearer ", id_token, NULL));
-						}
-					}
-				}
-            }
-            apr_pool_destroy(p);
-
-        }
-
-        ngx_log_error(NGX_LOG_ERR, httpRequest->connection->log, 0, "auth request unexpected status: %d", ctx->status);
-
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    return NGX_DECLINED;
 }
 
 static ngx_int_t
@@ -2912,7 +2841,7 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
             // print
             char tmp[8192]={0};
             memcpy(tmp, ctx->responseBody.data, ctx->responseBody.len);
-            printf("%s:%d body=[%s]\n", __FILE__, __LINE__, tmp);
+//            printf("%s:%d body=[%s]\n", __FILE__, __LINE__, tmp);
 
             char* responseBody = apr_pstrndup(r->pool, ctx->responseBody.data, ctx->responseBody.len);
             if(responseBody!=NULL) {
@@ -2927,6 +2856,7 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
 					}
 				}
             }
+            return NGX_DECLINED;
         }
 
         // default
