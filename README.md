@@ -16,6 +16,7 @@ Features
 - Allows multiple relying party based on domain
 - Supports "nonce" generation and validation
 - Supports relying party session
+- Removes custom headers from incoming request to ensure these headers are not spoofed.
 
 Initial setup
 ------------

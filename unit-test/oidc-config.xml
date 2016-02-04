@@ -2,23 +2,23 @@
 <oidcConfig>
 	<!-- OpenID-Connect Provider metadata url -->	 
 	 <oidcProvider>
-	 	<metadataUrl>https://login.int.dowjones.com/.well-known/openid-configuration</metadataUrl>
+	 	<metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl>
 	 </oidcProvider>
 
 	<!-- relying parties configuration -->
 	 <relyingParties>
-	 	<relyingParty clientID="client123" clientSecret="secret123">
-	 		<description>client123</description>
+	 	<relyingParty clientID="client123" clientSecret="secret123" domain=".example1.com" validateNonce="true">
+	 		<description>client 123</description>
 	 	</relyingParty>
-	 	<relyingParty clientID="client234" clientSecret="secret234">
-	 		<description>client234</description>
-	 	</relyingParty>	
+	 	<relyingParty clientID="client234" clientSecret="secret234" domain=".example2.com" validateNonce="false">
+	 		<description>client 123</description>
+	 	</relyingParty>	 	
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
      <pageActions>
  
-		<!-- nginx authz handlers -->
+		<!-- nginx-oidc verification handlers -->
 	    <action id="oidc_version"><handler>oidc_version</handler></action>
 	    <action id="oidc_config_core_status"><handler>oidc_config_core_status</handler></action>
 	    <action id="oidc_rewrite_pageactions"><handler>oidc_rewrite_pageactions</handler></action>
@@ -33,14 +33,14 @@
 		    <isForward>false</isForward>
 		    <regex>(.*)</regex>
 			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://login.int.wsj.com/auth/oauth2/authorize?response_type=id_token&scope=email%2Copenid&client_id=bX4v0n2RYsa5a6PIOsK0TipeKvpfyt2B&redirect_uri=($1U)&nonce=%{X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=id_token&scope=email%2Copenid&client_id=4bf497da4fe0402eb67af22e2fed1877&redirect_uri=http://dev.marketwatch.com/xxxxx&nonce=%{HTTP_X-RP-SESSION}r]]></uri>
 		</action>
 		<action id="oidc-login2"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
 		    <isForward>false</isForward>
 		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
 		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://login.int.wsj.com/auth/oauth2/authorize?response_type=id_token&scope=email%2Copenid&client_id=bX4v0n2RYsa5a6PIOsK0TipeKvpfyt2B&redirect_uri=($1U)&nonce=%{X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=id_token&scope=email%2Copenid&client_id=bX4v0n2RYsa5a6PIOsK0TipeKvpfyt2B&redirect_uri=($1U)&nonce=%{X-RP-SESSION}r]]></uri>
 		</action>
 		<action id="oidc_show_error">
 		    <description>error returned from idp</description>
@@ -68,13 +68,6 @@
               <header name="X-OIDC-VALIDATE-STATUS">failure</header>
 	        </match>
 	    </matchList>
-	    <matchList name="oidc_claim_mismatch">
-	        <match>
-				<header name="X-OIDC-VALIDATE-STATUS">success</header>
-              	<header name="X-OIDC-ISSUER" negate="true">https://login.int.wsj.com</header>
-              	<header name="X-OIDC-AUDIENCE" negate="true">2e100f51b88e4cccb99cbea26997cf7f</header> 
-	        </match>
-	    </matchList>
 	    <matchList name="oidc_idp_error">
 	        <match>
 				<path>error=</path>
@@ -94,12 +87,11 @@
 	    <!-- end of nginx authz-->
         
         <!-- id_token authorization rules -->
-	    <mapping path="^/" >
+	    <mapping path="^/protected" >
 			<postAuthAction matchList="oidc_idp_error">oidc_show_error</postAuthAction>
 			<postAuthAction matchList="invalid_id_token">oidc-login2</postAuthAction>
 			<postAuthAction matchList="oidc_session_missing">oidc-login</postAuthAction>
 			<postAuthAction matchList="oidc_session_invalid">oidc-login</postAuthAction>
-			<postAuthAction matchList="oidc_claim_mismatch">oidc-login</postAuthAction>
 	    </mapping>
         <!-- end of id_token authorization rules -->
         	            
