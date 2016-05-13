@@ -1,8 +1,8 @@
-# ngx-openidc
+# nginx-openidc
 Nginx module for openid connect relying party.
 =============================================
 
-**ngx-openidc is Nginx module allows openid-connect(JWT) validation and access control based on standard claim as headers. 
+**nginx-openidc is Nginx module allows openid-connect(JWT) validation and access control based on standard claim as headers. 
 
 Here are the some of the features supported.
 
@@ -24,14 +24,14 @@ Supported platforms
 
 # Installation
 ``````````
-git clone https://github.com/tarachandverma/ngx-openidc.git
+git clone https://github.com/tarachandverma/nginx-openidc.git
 wget 'http://nginx.org/download/nginx-1.8.0.tar.gz'
 tar -xzvf nginx-1.8.0.tar.gz
 cd nginx-1.8.0/
 
  # Here we assume you would install you nginx under /opt/nginx/.
  ./configure --prefix=/opt/nginx \
-     --add-module=../ngx-openidc
+     --add-module=../nginx-openidc
 ``````````
      
 # Test
@@ -42,7 +42,7 @@ TODO
 OPENIDC_HomeDir                        /opt/nginx-1.8.0/conf/oidc;
 OPENIDC_LogFile                        oidc-refresh.log;
 OPENIDC_SharedMemory  file=/config.shm size=61000;
-OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/ngx-openidc/master/example-conf/;
+OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
 OPENIDC_PassPhrase                     abc123;
 OPENIDC_HeaderPrefix                   X-REMOTE-;
 OPENIDC_ConfigFile                     oidc-config.xml;
@@ -88,7 +88,7 @@ http {
 	OPENIDC_HomeDir                        /opt/nginx-1.8.0/conf/oidc;
 	OPENIDC_LogFile                        oidc-refresh.log;
 	OPENIDC_SharedMemory  file=/config.shm size=61000;
-	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/ngx-openidc/master/example-conf/;
+	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
 	OPENIDC_PassPhrase                     abc123;
 	OPENIDC_HeaderPrefix                   X-REMOTE-;
 	OPENIDC_ConfigFile                     oidc-config.xml;
@@ -216,8 +216,8 @@ More documentation to be followed:
 Development
 ------------
 
-- Source hosted at [GitHub](https://github.com/tarachandverma/ngx-openidc)
-- Report issues, questions, feature requests on [GitHub Issues](https://github.com/tarachandverma/ngx-openidc/issues)
+- Source hosted at [GitHub](https://github.com/tarachandverma/nginx-openidc)
+- Report issues, questions, feature requests on [GitHub Issues](https://github.com/tarachandverma/nginx-openidc/issues)
 
 Diagnostics
 ---------------------
