@@ -31,11 +31,24 @@ tar -xzvf nginx-1.8.0.tar.gz
 cd nginx-1.8.0/
 
  # Here we assume you would install you nginx under /opt/nginx/.
- ./configure --add-module=/src --with-http_ssl_module
+ ./configure --add-module=../src --with-http_ssl_module
+ make
+ make install
 ``````````
      
-# Test
-TODO
+# Test ( using docker )
+# build docker image
+	docker build -t nginx-oidc .
+
+#run docker image	
+	docker run -p 80:80 -p 443:443 -i -t nginx-oidc
+
+# add /etc/hosts entry
+NEW-DOCKER-IP ngx-oidc-demo.com
+
+#access docker container via protected path
+http://ngx-oidc-demo.com/protected
+
 
 # Main Configuration
 ````````````````````
