@@ -452,34 +452,54 @@
 					am_addMapping(sheap,ret->path_mappings->postauth,pmap);	
 				}
 			}
-			
 		}
-		
-		if(axml->oidcProvider!=NULL&&axml->oidcProvider->metadataUrl!=NULL) {
-			// download oidcProvider url and read it.
-			ret->oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
+
+		if(axml->oidcProvider==NULL) {
+			return apr_pstrdup(p,"oidcProvider is NULL");
+		}
+
+		// download oidcProvider url and read it.
+		ret->oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
+		char* jwksJson = NULL;
+		if(axml->oidcProvider->metadataUrl!=NULL) {
 			ret->oidcProvider->metadataUrl=shdata_32BitString_copy(sheap,axml->oidcProvider->metadataUrl);
-
 			char* metadata = oauthconf_downloadOIDCProviderMetadata(p, sheap, homeDir, axml->oidcProvider->metadataUrl);
-			if(metadata!=NULL) {
-				Value* json = 	JSON_Parse(p, metadata);
-				if(json==NULL) return NULL;
+			Value* json = 	JSON_Parse(p, metadata);
+			if(json==NULL) return NULL;
 
-				Value* item = JSON_GetObjectItem(json, "jwks_uri");
-				char* jwksUri = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-				ret->oidcProvider->jwksUri=shdata_32BitString_copy(sheap,jwksUri);
+			Value* item = JSON_GetObjectItem(json, "issuer");
+			char* issuer = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+			ret->oidcProvider->issuer=shdata_32BitString_copy(sheap,issuer);
 
-				item = JSON_GetObjectItem(json, "issuer");
-				char* issuer = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-				ret->oidcProvider->issuer=shdata_32BitString_copy(sheap,issuer);
+			item = JSON_GetObjectItem(json, "authorization_endpoint");
+			char* authorizationEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+			ret->oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,authorizationEndpoint);
 
-				item = JSON_GetObjectItem(json, "authorization_endpoint");
-				char* authorizationEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-				ret->oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,authorizationEndpoint);
+			item = JSON_GetObjectItem(json, "token_endpoint");
+			char* tokenEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+			ret->oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,tokenEndpoint);
 
-				item = JSON_GetObjectItem(json, "token_endpoint");
-				char* tokenEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-				ret->oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,tokenEndpoint);
+			item = JSON_GetObjectItem(json, "jwks_uri");
+			char* jwksUri = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+			ret->oidcProvider->jwksUri=shdata_32BitString_copy(sheap,jwksUri);
+
+			// download JWT verification keys from url
+			if(ret->oidcProvider->jwksUri!=NULL) {
+				http_util_result* httpResult=hc_get_verbose(p, ret->oidcProvider->jwksUri, 10, NULL, NULL, error);
+				if(!hc_is200_OK(httpResult)) {
+					if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response and cache file both failed"); }
+					apr_pool_destroy (subp);
+					return NULL;
+				}
+				jwksJson = httpResult->data;
+			}
+		} else {
+			ret->oidcProvider->issuer=shdata_32BitString_copy(sheap, axml->oidcProvider->issuer);
+			ret->oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,axml->oidcProvider->authorizationEndpoint);
+			ret->oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,axml->oidcProvider->tokenEndpoint);
+			ret->oidcProvider->jwksUri=shdata_32BitString_copy(sheap,axml->oidcProvider->jwksUri);
+			// download JWT verification keys from url
+			if(ret->oidcProvider->jwksUri!=NULL) {
 
 				http_util_result* httpResult=hc_get_verbose(p, ret->oidcProvider->jwksUri, 10, NULL, NULL, error);
 				if(!hc_is200_OK(httpResult)) {
@@ -487,59 +507,64 @@
 					apr_pool_destroy (subp);
 					return NULL;
 				}
+				jwksJson = httpResult->data;
+			} else {
+				jwksJson = shdata_32BitString_copy(sheap,axml->oidcProvider->jwksJson);
+			}
+		}
 
-				json = 	JSON_Parse(p, httpResult->data);
-				if(json==NULL) {
-					if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response parsing failed"); }
-					apr_pool_destroy (subp);
-					return NULL;
-				}
+		if(jwksJson!=NULL) {
+			Value* json = 	JSON_Parse(p, jwksJson);
+			if(json==NULL) {
+				if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response parsing failed"); }
+				apr_pool_destroy (subp);
+				return NULL;
+			}
 
-				Value* array = JSON_GetObjectItem(json, "keys");
-				if(array==NULL||JSON_GetItemType(array)!=JSON_Array) {
-					if(error!=NULL) { *error = apr_pstrdup(p, "keys object is not array"); }
-					apr_pool_destroy (subp);
-					return NULL;
-				}
+			Value* array = JSON_GetObjectItem(json, "keys");
+			if(array==NULL||JSON_GetItemType(array)!=JSON_Array) {
+				if(error!=NULL) { *error = apr_pstrdup(p, "keys object is not array"); }
+				apr_pool_destroy (subp);
+				return NULL;
+			}
 
-				int	arrSz = JSON_GetArraySize(array);
-				ret->oidcProvider->jwsKeys=shapr_hash_make(sheap);
+			int	arrSz = JSON_GetArraySize(array);
+			ret->oidcProvider->jwsKeys=shapr_hash_make(sheap);
 
-				// Retrieve item number "item" from array "array". Returns NULL if unsuccessful.
-				for (i=0; i<arrSz; i++) {
+			// Retrieve item number "item" from array "array". Returns NULL if unsuccessful.
+			for (i=0; i<arrSz; i++) {
 
-					oauth_jwskey* jwsKey=(oauth_jwskey*)shdata_shpcalloc(sheap,sizeof(oauth_jwskey));
+				oauth_jwskey* jwsKey=(oauth_jwskey*)shdata_shpcalloc(sheap,sizeof(oauth_jwskey));
 
-					Value* element = JSON_GetArrayItem(array, i);
-					Value* keyIDObj = JSON_GetObjectItem(element, "kid");
-					const char* keyID = (keyIDObj) ? JSON_GetStringFromStringItem(keyIDObj) : NULL;
-					jwsKey->id = shdata_32BitString_copy(sheap,keyID);
+				Value* element = JSON_GetArrayItem(array, i);
+				Value* keyIDObj = JSON_GetObjectItem(element, "kid");
+				const char* keyID = (keyIDObj) ? JSON_GetStringFromStringItem(keyIDObj) : NULL;
+				jwsKey->id = shdata_32BitString_copy(sheap,keyID);
 
-					Value* val = JSON_GetObjectItem(element, "kty");
-					char* type = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-					jwsKey->type=shdata_32BitString_copy(sheap,type);
+				Value* val = JSON_GetObjectItem(element, "kty");
+				char* type = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+				jwsKey->type=shdata_32BitString_copy(sheap,type);
 
-					val = JSON_GetObjectItem(element, "alg");
-					char* algorithm = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-					jwsKey->algorithm=shdata_32BitString_copy(sheap, algorithm);
+				val = JSON_GetObjectItem(element, "alg");
+				char* algorithm = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+				jwsKey->algorithm=shdata_32BitString_copy(sheap, algorithm);
 
-					val = JSON_GetObjectItem(element, "use");
-					char* use = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-					jwsKey->use=shdata_32BitString_copy(sheap, use);
+				val = JSON_GetObjectItem(element, "use");
+				char* use = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+				jwsKey->use=shdata_32BitString_copy(sheap, use);
 
-					val = JSON_GetObjectItem(element, "n");
-					char* modulus = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-					jwsKey->modulus=shdata_32BitString_copy(sheap, modulus);
+				val = JSON_GetObjectItem(element, "n");
+				char* modulus = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+				jwsKey->modulus=shdata_32BitString_copy(sheap, modulus);
 
-					val = JSON_GetObjectItem(element, "e");
-					char* exponent = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-					jwsKey->exponent=shdata_32BitString_copy(sheap, exponent);
+				val = JSON_GetObjectItem(element, "e");
+				char* exponent = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+				jwsKey->exponent=shdata_32BitString_copy(sheap, exponent);
 
-					shapr_hash_set(sheap,ret->oidcProvider->jwsKeys,jwsKey->id,APR_HASH_KEY_STRING,jwsKey);
-
-				}
+				shapr_hash_set(sheap,ret->oidcProvider->jwsKeys,jwsKey->id,APR_HASH_KEY_STRING,jwsKey);
 
 			}
+
 		}
 
 		ret->rpSession=

@@ -927,6 +927,47 @@
 		}
 		return 1;
 	}
+	static int amx_setOIDCProviderIssuer(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
+		if(amx->oidcProvider!=NULL) {
+			amx->oidcProvider->issuer=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
+	static int amx_setOIDCProviderAuthorizationEndpoint(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
+		if(amx->oidcProvider!=NULL) {
+			amx->oidcProvider->authorizationEndpoint=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
+	static int amx_setOIDCProviderTokenEndpoint(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
+		if(amx->oidcProvider!=NULL) {
+			amx->oidcProvider->tokenEndpoint=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
+	static int amx_setOIDCProviderJwksUri(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
+		if(amx->oidcProvider!=NULL) {
+			amx->oidcProvider->jwksUri=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
+
+	static int amx_setOIDCProviderJwksJson(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
+		if(amx->oidcProvider!=NULL) {
+			amx->oidcProvider->jwksJson=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
 
 	char* amx_loadConfFile(pool* p, char* file, oidc_config_xml* conf){
 		XmlCore* xCore;
@@ -999,6 +1040,11 @@
 
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider",0,amx_newOIDCProvider,NULL,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/metadataUrl",0,NULL,amx_setOIDCProviderMetadataUrl,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/issuer",0,NULL,amx_setOIDCProviderIssuer,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/authorizationEndpoint",0,NULL,amx_setOIDCProviderAuthorizationEndpoint,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/tokenEndpoint",0,NULL,amx_setOIDCProviderTokenEndpoint,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/jwksUri",0,NULL,amx_setOIDCProviderJwksUri,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/jwksJson",0,NULL,amx_setOIDCProviderJwksJson,NULL, &tmp);
 
 		result=xc_beginParsingTextResponse(xCore,file);
 		return result;
