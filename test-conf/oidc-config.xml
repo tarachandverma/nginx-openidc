@@ -1,122 +1,8 @@
-# nginx-openidc
-Nginx module for openid connect relying party.
-=============================================
-
-**nginx-openidc is Nginx module allows openid-connect(JWT) validation and access control based on standard claim as headers. 
-
-Here are the some of the features supported.
-
-Features
-------------
-- Supports all OAuth2.0/OpenID-Connect flows
-- Supports HS256 and RS256
-- Caching of RS256 public key to avoid downloading RS256 public key every request.
-- Implements Access phase which validates id_token(JWT) and passes claims as custom headers
-- Implements Post Authorization phase custom response based on custom headers.
-- Allows multiple relying party based on domain
-- Supports "nonce" generation and validation
-- Supports relying party session
-- Removes custom headers from incoming request to ensure these headers are not spoofed.
-
-Supported platforms
---------------------------------------
-- All the flavors of *nix platforms, freebsd.
-
-# Installation
-``````````
-git clone https://github.com/tarachandverma/nginx-openidc.git
-cd nginx-openidc
-wget 'http://nginx.org/download/nginx-1.8.0.tar.gz'
-tar -xzvf nginx-1.8.0.tar.gz
-cd nginx-1.8.0/
-
- # Here we assume you would install you nginx under /opt/nginx/.
- ./configure --add-module=/src --with-http_ssl_module
-``````````
-     
-# Test
-TODO
-
-# Main Configuration
-````````````````````
-OPENIDC_HomeDir                        /usr/local/nginx/conf;
-OPENIDC_LogFile                        oidc-refresh.log;
-OPENIDC_SharedMemory  file=/config.shm size=61000;
-OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
-OPENIDC_PassPhrase                     abc123;
-OPENIDC_HeaderPrefix                   X-REMOTE-;
-OPENIDC_ConfigFile                     oidc-config.xml;
-
-````````````````````
-
-- **OPENIDC_HomeDir** Home directory to hold openid configuration and logs files.
-
-Specify description string.
-
-- **OPENIDC_LogFile**
-
-Log file is generated upon startup and refresh and records information whats loaded in shared memory.
-
-- **OPENIDC_SharedMemory**
-
-Specifies shared memory file name and size
-
-- **OPENIDC_RemotePath**
-
-Optional: Specifies remote directory to download oidc-config.xml during startup.
-
-- **OPENIDC_PassPhrase**
-
-Specifies passPhrase to encrypt/decrypt relying party session
-
-- **OPENIDC_HeaderPrefix**
-
-Specifies custom headers prefix for the claims, default:X-OIDC-
-
-- **OPENIDC_ConfigFile**
-
-Specify relying party configuration and custom post Authorization response and rules
-
-
-How to enable ngx openid-connect : nginx.conf
----------------------------------------------
-`````````````````````
-
-http {
-
-	...
-	OPENIDC_HomeDir                        /opt/nginx-1.8.0/conf/oidc;
-	OPENIDC_LogFile                        oidc-refresh.log;
-	OPENIDC_SharedMemory  file=/config.shm size=61000;
-	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
-	OPENIDC_PassPhrase                     abc123;
-	OPENIDC_HeaderPrefix                   X-REMOTE-;
-	OPENIDC_ConfigFile                     oidc-config.xml;
-	
-	server {
-			...
-			# authorization code flow - exchanging authorization code to id_token(JWT)
-		    location /internal/oauth2/token {
-		    	internal;
-		        proxy_pass https://www.googleapis.com/oauth2/v4/token;
-		    }
-	}
-...
-}
-
-
-`````````````````````
-
-openid-connect configuration : oidc-conf.xml
--------------------------------------------
-
-```XML
 <?xml version="1.0"?>
 <oidcConfig>
 	<!-- OpenID-Connect Provider metadata url -->	 
 	 <oidcProvider>
-	 	<metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl>
-		<!--you can set individua params as well if metadata is not available -->
+	 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
 	 	<issuer>https://accounts.google.com</issuer>
 	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
 	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
@@ -155,12 +41,12 @@ openid-connect configuration : oidc-conf.xml
    "e": "AQAB"
   }
  ]
-}]]></jwksJson>	 	
+}]]></jwksJson>	 		 	
 	 </oidcProvider>
 
 	<!-- relying parties configuration -->
 	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="xxxxxxxxxxx" domain=".com" validateNonce="true">
+	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="xxxxxxx" domain=".com" validateNonce="true">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
 	 	</relyingParty>
@@ -169,7 +55,7 @@ openid-connect configuration : oidc-conf.xml
 	 
      <pageActions>
  
-		<!-- nginx authz handlers -->
+		<!-- nginx oidc internal verification handlers for what's configuration params are loaded in memory -->
 	    <action id="oidc_version"><handler>oidc_version</handler></action>
 	    <action id="oidc_config_core_status"><handler>oidc_config_core_status</handler></action>
 	    <action id="oidc_rewrite_pageactions"><handler>oidc_rewrite_pageactions</handler></action>
@@ -184,21 +70,37 @@ openid-connect configuration : oidc-conf.xml
 		    <isForward>false</isForward>
 		    <regex>(.*)</regex>
 			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r&state=($0U)]]></uri>
 		</action>
-		<action id="oidc-login2"><!-- strip id_token from outgoig request -->
+		<action id="oidc-login-strip-invalid-token"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
 		    <isForward>false</isForward>
 		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
 		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r&state=($0U)]]></uri>
 		</action>
 		<action id="oidc_show_error">
 		    <description>error returned from idp</description>
 		    <isForward>false</isForward>
 		    <response code="412" contentType="application/json"><![CDATA[{"responsecode":412, "description":"Error occured, see query param for description"}]]></response>
 		</action>
-	    
+		<action id="oidc_show_success">
+		    <description>error returned from idp</description>
+		    <isForward>false</isForward>
+		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you are successfully able to access this page"}]]></response>
+		</action>		
+		<action id="goto-resource1">
+		    <description>send to resource sent in state</description>
+		    <isForward>false</isForward>
+		    <regex><![CDATA[state=(.*)]]></regex>
+		    <uri>($2u)</uri>
+		</action>
+		<action id="goto-resource2">
+		    <description>send to resource sent in state</description>
+		    <isForward>false</isForward>
+		    <regex><![CDATA[state=(.*)&]]></regex>
+		    <uri>($2u)</uri>
+		</action>			    
 	    
     </pageActions>
 
@@ -237,38 +139,29 @@ openid-connect configuration : oidc-conf.xml
 	    <mapping path="^/oidc"><postAuthAction>oidc_index</postAuthAction></mapping>
 	    <!-- end of nginx authz-->
         
-        <!-- id_token authorization rules -->
+        <!-- JWT based authorization rules -->
+        <!-- protected url which you want to trigger login action -->
 	    <mapping path="^/protected" >
 			<postAuthAction matchList="oidc_idp_error">oidc_show_error</postAuthAction>
-			<postAuthAction matchList="invalid_id_token">oidc-login2</postAuthAction>
+			<postAuthAction matchList="invalid_id_token">oidc-login-strip-invalid-token</postAuthAction>
 			<postAuthAction matchList="oidc_session_missing">oidc-login</postAuthAction>
 			<postAuthAction matchList="oidc_session_invalid">oidc-login</postAuthAction>
+			<postAuthAction>oidc_show_success</postAuthAction>			
 	    </mapping>
-        <!-- end of id_token authorization rules -->
+        <!-- end of JWT authorization rules -->
+        
+        <!-- redirect_uri aka callback handling -->
+	    <mapping path="^/oauth2/callback\?(.*)error=">
+			<postAuthAction>oidc_show_error</postAuthAction>			
+	    </mapping>
+	    <mapping path="^/oauth2/callback\?code=(.*)&state=(.*)">
+			<postAuthAction>goto-resource1</postAuthAction>			
+	    </mapping>
+	    <mapping path="^/oauth2/callback\?state=(.*)&code=(.*)">
+			<postAuthAction>goto-resource2</postAuthAction>			
+	    </mapping>	    
+        <!-- end of callback rules -->        
         	            
 	</pathMappings>
 </oidcConfig>
 
-```
-
-More documentation to be followed:
-
-Development
-------------
-
-- Source hosted at [GitHub](https://github.com/tarachandverma/nginx-openidc)
-- Report issues, questions, feature requests on [GitHub Issues](https://github.com/tarachandverma/nginx-openidc/issues)
-
-Diagnostics
----------------------
-
-- Log file path
--  	Startup log - <homeDir>/oidc-refresh.log
-
-
-Authors
--------
-
-[Tara chand Verma]
-
-* * *

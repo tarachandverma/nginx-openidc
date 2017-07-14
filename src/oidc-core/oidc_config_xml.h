@@ -52,6 +52,11 @@
 
 	typedef struct oidc_provider_xml{
 		char* metadataUrl;
+		char* issuer;
+		char* authorizationEndpoint;
+		char* tokenEndpoint;
+		char* jwksUri;
+		char* jwksJson;
 	}oidc_provider_xml;
 
 	typedef struct oidc_config_xml{

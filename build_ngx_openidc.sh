@@ -1,7 +1,8 @@
-cd ./dependencies/nginx-1.8.0
-./configure --prefix=/opt/nginx-1.8.0	\
-	--add-module=../../ \
-  --with-http_ssl_module  
+#! /bin/bash
+# untar nginx
+tar -zxvf nginx-1.8.0.tar.gz
+cd nginx-1.8.0
+./configure --add-module=/src --with-http_ssl_module  
 make
-sudo make install
+make install
 
