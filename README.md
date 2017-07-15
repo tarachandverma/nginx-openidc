@@ -4,6 +4,21 @@ Nginx module for openid connect relying party.
 
 **nginx-openidc is Nginx module allows openid-connect(JWT) validation and access control based on standard claim as headers. 
 
+This document details the technical architecture and reasoning behind the
+nginx-openidc system.
+
+The request flow
+----------------
+1. The user makes a request for a protected resource on RP `ngx-oidc-demo.com` for resource http://ngx-oidc-demo.com/protected.
+2. In "Access" phase of nginx, **nginx-openidc** performs a check RP session exists containing the logged-in userinfo.
+3. **nginx-openidc** decrypts cookie, verifies payload.
+4. On success, The **nginx-openidc** sets request headers X-OIDC-* i.e. X-OIDC-SUBJECT, X-OIDC-ISSUER and many more depending on scopes requested from JWT claim.
+5. In post "Access" phase, **nginx-openidc** oidc-config.xml rules are executed.
+	This is most important phase where you can define unlimited authorization rules based on X-OIDC-* header
+6. Upon successfully running rules in post authorization phase, nginx forwards them to the
+   backend **service** application.
+7. The **service** application can use the X-OIDC-* headers as-is.
+   
 Here are the some of the features supported.
 
 Features
