@@ -60,6 +60,11 @@
 			<advancedTemplate>true</advancedTemplate>		    
 		    <uri><![CDATA[%{state}q]]></uri>
 		</action>
+		<action id="oidc_api_success">
+		    <description>api success returned from idp</description>
+		    <isForward>false</isForward>
+		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you emailAddress is %{HTTP_X-OIDC-EMAIL}r"}]]></response>
+		</action>		
     </pageActions>
 
 	<matchLists>
@@ -112,10 +117,16 @@
 	    <mapping path="^/oauth2/callback\?(.*)error=">
 			<postAuthAction>oidc_show_error</postAuthAction>			
 	    </mapping>
-	    <mapping path="^/oauth2/callback?(.*)state=">
+	    <mapping path="^/oauth2/callback\?(.*)state=">
 			<postAuthAction>goto-resource</postAuthAction>			
 	    </mapping>   
-        <!-- end of callback rules -->        
+        <!-- end of callback rules -->
+        
+        <!-- APIs authorizatioin -->        
+	    <mapping path="^/api/user.email\?id_token=">
+			<postAuthAction matchList="oidc_session_invalid">oidc_show_error</postAuthAction>
+			<postAuthAction>oidc_api_success</postAuthAction>				
+	    </mapping>        
         	            
 	</pathMappings>
 </oidcConfig>

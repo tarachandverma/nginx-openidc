@@ -7,14 +7,29 @@ Nginx module for openid connect relying party.
 This document details the technical architecture and reasoning behind the
 nginx-openidc system.
 
-The request flow
-----------------
+The request flow - Relying Party ( RP )
+---------------------------------------
 1. The user makes a request for a protected resource on RP `ngx-oidc-demo.com` for resource http://ngx-oidc-demo.com/protected.
 2. In "Access" phase of nginx, **nginx-openidc** performs a check RP session exists containing the logged-in userinfo.
 3. **nginx-openidc** decrypts cookie, verifies payload.
 4. On success, The **nginx-openidc** sets request headers X-OIDC-* i.e. X-OIDC-SUBJECT, X-OIDC-ISSUER and many more depending on scopes requested from JWT claim.
 5. In post "Access" phase, **nginx-openidc** oidc-config.xml rules are executed.
 	This is most important phase where you can define unlimited authorization rules based on X-OIDC-* header
+6. Upon successfully running rules in post authorization phase, nginx forwards them to the
+   backend **service** application.
+7. The **service** application can use the X-OIDC-* headers as-is.
+
+The request flow - API authorization
+------------------------------------
+1. ClientApp gets a JWT from authorized OP or generates a JWT using "client-credentials" flow
+2. The clientApp makes a request for a protected API on `ngx-oidc-demo.com` for resource 
+	http://ngx-oidc-demo.com/api/user.email?id_token=
+	OR
+	http://ngx-oidc-demo.com/api/user.email?id_token=
+	Authorization: Bearer <id_token received from step(1)>
+3. In "Access" phase of nginx, **nginx-openidc** performs JWT validation.
+4. On success, The **nginx-openidc** sets request headers X-OIDC-* i.e. X-OIDC-SUBJECT, X-OIDC-ISSUER and many more depending on scopes requested from JWT claim.
+5. In post "Access" phase, **nginx-openidc** oidc-config.xml rules are executed.
 6. Upon successfully running rules in post authorization phase, nginx forwards them to the
    backend **service** application.
 7. The **service** application can use the X-OIDC-* headers as-is.
@@ -64,7 +79,7 @@ NEW-DOCKER-IP ngx-oidc-demo.com
 #access docker container via protected path
 http://ngx-oidc-demo.com/protected
 
-# Example : headers available on successful JWT validation
+# Example : headers available on successful JWT validation ( all header is prefixed with HTTP_ when it reaches to backend app )
 ````````````````````
 X-OIDC-VALIDATE-STATUS = 	success
 X-OIDC-ISSUER = 	https://accounts.google.com
@@ -157,7 +172,9 @@ openid-connect configuration : oidc-conf.xml
 	 	<issuer>https://accounts.google.com</issuer>
 	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
 	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
-	 	<jwksJson><![CDATA[{
+	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri><!-- json web keys url exposed by OP, useful if keys are rotated by OP -->
+	 	<!-- json web keys in JSON format, useful if keys are not rotated by OP -->
+	 	<!--jwksJson><![CDATA[{
  "keys": [
   {
    "kty": "RSA",
@@ -192,15 +209,24 @@ openid-connect configuration : oidc-conf.xml
    "e": "AQAB"
   }
  ]
-}]]></jwksJson>	 	
+}]]></jwksJson-->	 	
 	 </oidcProvider>
 
-	<!-- relying parties configuration -->
-	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="xxxxxxxxxxx" domain=".com" validateNonce="true">
+	<!-- relying parties configuration, you can configure multiple relying parties, default must be configured and usually same as first one in case there is only one -->
+	 <relyingParties default="$$YOUR CLIENT ID for APP1 $$"><!-- default is mendatory and is same as first one  -->
+	 	<relyingParty clientID="$$YOUR CLIENT ID for app1$$" clientSecret="$$YOUR CLIENT SECRET for app1$$" domain=""$$YOUR APPLICATION DOMAIN$$"" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
-	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
+	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
 	 	</relyingParty>
+	 	<relyingParty clientID="$$YOUR CLIENT ID for app2 $$" clientSecret="$$YOUR CLIENT SECRET for app2$$" domain=""$$YOUR APPLICATION DOMAIN$$"" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 		<description>nginx oidc demo</description>
+	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
+	 	</relyingParty>
+	 	...
+	 	<relyingParty clientID="$$YOUR CLIENT ID for appn $$" clientSecret="$$YOUR CLIENT SECRET for appn$$" domain=""$$YOUR APPLICATION DOMAIN$$"" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 		<description>nginx oidc demo</description>
+	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
+	 	</relyingParty>	 		 	
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
