@@ -6,47 +6,12 @@
 	 	<issuer>https://accounts.google.com</issuer>
 	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
 	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
-	 	<jwksJson><![CDATA[{
- "keys": [
-  {
-   "kty": "RSA",
-   "alg": "RS256",
-   "use": "sig",
-   "kid": "2758a0d689ad62a453a671429a41d192d6bb7291",
-   "n": "wjiigb39qOCj_WwYKqspYpk7SbuirXARcOo8bLzI95V3OIisz-40eOyo_SaeNeDb4KOcWZ9Qr0YmRnw0G8JhfVB973KwTURsUHQw3Q1fZSBw5T0vCMS5UHbMLxjHptCZ6kVRbBnRVuCMvY3ws0LCK9h9e4l7rCfXMQF3IlBUCisrGpYiVTO1-Mj3J6h_TJ7QDRQnqkX5jzcv-8XCRg_BefA40sC2fXjpZezdf8i27d3tuPRsjD46wFydDZk_KFBqSr8RE2EzJ6yaSNWnKByJejA6tNLK72UIrt0GE83TS1d369kGN2hk57gonlNMo-v5GTFweFNnQGU1xOng30bdvQ",
-   "e": "AQAB"
-  },
-  {
-   "kty": "RSA",
-   "alg": "RS256",
-   "use": "sig",
-   "kid": "8a60d44a4ece38c0c9d16be136b2a1427b1d6ee0",
-   "n": "l9Cn5qmr7VFKIed9RQIZPdenYp-V1BDM1wMg7Rpkl8mNQ7qsnJWuK8JKQoIljbwr9L1kKikKOR37z1prV0ZTQQao73YsB34OLbi25g0Xcr32j5giQDMxmFxmrYN1LG-T4qEOI4hE52Bafr5jBuZwL56HeuEU5G-QunGrNieGcfdVFXVW8-f9UBkJmoF_Dw_H38wNKif79tGKD2XXdG-VjT-Pg2nbpzQ6fIXunzaaW9aUyoNZWpQQ9_QBqgEApHAP5qWGQsUQLwzkiUr1Du51ERLC7nm3B-pLFqIlRmqiWVtUAdF0wkKaCQXyvFS2KabG9D4aX0T_MKESsV7T6wwvsQ",
-   "e": "AQAB"
-  },
-  {
-   "kty": "RSA",
-   "alg": "RS256",
-   "use": "sig",
-   "kid": "eb29843dd7334cf989e1db6a2b0c6e07a10a9cd3",
-   "n": "jTBFxlzE8GwPWvSRsiUIiZGp8QxhZNv9QMhoEIHaoyaTlHBGS3cmsqhEroFjW5dwiVee_WJFBd7IcoaBZgVmHgLVMCr7dDokcO2LWIgbPikS1gfCuD2twZyoGdVWRpLy1KGSFlINcn1bbvPpod6Bt3sEEIv-rSSR5sgRFJbPpKwIZDrZnZMRPVM6a29WJ129uo04hIpig3p7ULpFTJrAkkQAtfEtP_uFJXCF8DrG1HoM6xlVOR2ksqjkpQYAa7p5yPZGEn_oZDxeVSzjuKG5KRt7-UL7hSg3q4jdEeX60j6DAZEcxX8apIpmYG2gmACBWKWnguHRZXdqfofyBcKizQ",
-   "e": "AQAB"
-  },
-  {
-   "kty": "RSA",
-   "alg": "RS256",
-   "use": "sig",
-   "kid": "0ec3739dba77e22d632f3484b687391a8956f96b",
-   "n": "jA4LmJfj1zuYFYCEWJD62Di-LbuamWbTqdhSaNWCRovztCIY0UlbnoGluNpzePOHJSuocOgucQNybwpdCVJ9S0rCPccytDw1hAxcFqmHOeqGIdfnpCojF0m9pggleHgWI9biwWt1jbkAqNx7VK1gNUkhWoVp_iQGfE37DnWptdDMmh9wVMc2SY8wqxtkcZebYpRNE52t1HSnXJ6z_HtMYvoRpi35Ltv6tuB16vFgb70k3AiGfrK8llpo8VZBHax5MCAZM612zA24G3tYDPSPGksrnoUFL5Iwyv-Mf9y4y6kFlV5hIpC27VPJxXzc9jD1kMBmQxIArHpAVsea_C8eQQ",
-   "e": "AQAB"
-  }
- ]
-}]]></jwksJson>	 		 	
+	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	 		 	
 	 </oidcProvider>
 
 	<!-- relying parties configuration -->
 	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="xxxxxxx" domain=".com" validateNonce="true">
+	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" domain=".com" validateNonce="true">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
 	 	</relyingParty>
@@ -89,19 +54,12 @@
 		    <isForward>false</isForward>
 		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you are successfully able to access this page"}]]></response>
 		</action>		
-		<action id="goto-resource1">
+		<action id="goto-resource">
 		    <description>send to resource sent in state</description>
 		    <isForward>false</isForward>
-		    <regex><![CDATA[state=(.*)]]></regex>
-		    <uri>($2u)</uri>
+			<advancedTemplate>true</advancedTemplate>		    
+		    <uri><![CDATA[%{state}q]]></uri>
 		</action>
-		<action id="goto-resource2">
-		    <description>send to resource sent in state</description>
-		    <isForward>false</isForward>
-		    <regex><![CDATA[state=(.*)&]]></regex>
-		    <uri>($2u)</uri>
-		</action>			    
-	    
     </pageActions>
 
 	<matchLists>
@@ -154,12 +112,9 @@
 	    <mapping path="^/oauth2/callback\?(.*)error=">
 			<postAuthAction>oidc_show_error</postAuthAction>			
 	    </mapping>
-	    <mapping path="^/oauth2/callback\?code=(.*)&state=(.*)">
-			<postAuthAction>goto-resource1</postAuthAction>			
-	    </mapping>
-	    <mapping path="^/oauth2/callback\?state=(.*)&code=(.*)">
-			<postAuthAction>goto-resource2</postAuthAction>			
-	    </mapping>	    
+	    <mapping path="^/oauth2/callback?(.*)state=">
+			<postAuthAction>goto-resource</postAuthAction>			
+	    </mapping>   
         <!-- end of callback rules -->        
         	            
 	</pathMappings>

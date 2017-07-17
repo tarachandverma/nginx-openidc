@@ -1071,6 +1071,17 @@ static const char *ngx_http_openidc_urlEncodeToken(ngx_http_openidc_request_t *r
 	return url_encode2(r->pool,(char*)arg);
 }
 
+static const char *ngx_http_openidc_requestQuery(ngx_http_openidc_request_t *r, const char *arg)
+{
+	uri_components *url = &r->parsed_uri;
+	if(arg==NULL) return "(null)";
+	const char *s = url_getParam(r->pool, url->query, arg);
+   if (s)
+       return s;
+   else
+       return "(null)";
+}
+
 	typedef struct tag_handler{
 		const char c;
 		const char* (*func)(ngx_http_openidc_request_t*,const char* arg);
@@ -1081,7 +1092,8 @@ static const char *ngx_http_openidc_urlEncodeToken(ngx_http_openidc_request_t *r
 			{'s', ngx_http_openidc_serverVars},
 			{'c', ngx_http_openidc_requestCookie},
 			{'u', ngx_http_openidc_urlDecodeToken},
-			{'U', ngx_http_openidc_urlEncodeToken}
+			{'U', ngx_http_openidc_urlEncodeToken},
+			{'q', ngx_http_openidc_requestQuery},
 	};
 
 static const char* ngx_http_openidc_getTagValue(char* s, ngx_http_openidc_request_t*r, char**next) {
@@ -2915,8 +2927,8 @@ ngx_http_openidc_create_post_subrequest(ngx_http_request_t * r, oidc_authz_sub_r
     psr->data = ctx;
 
     ngx_str_t subrequest_uri = sub_request_type.uri;
-    printf("subrequest_uri=%s\n", (const char*)subrequest_uri.data);
-    printf("requestBody=%s\n", requestBody);
+//    printf("subrequest_uri=%s\n", (const char*)subrequest_uri.data);
+//    printf("requestBody=%s\n", requestBody);
 
     rc = ngx_http_subrequest(r, &subrequest_uri, NULL, &sr, psr, NGX_HTTP_SUBREQUEST_IN_MEMORY);
     if (rc != NGX_OK) {

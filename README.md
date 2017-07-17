@@ -64,6 +64,15 @@ NEW-DOCKER-IP ngx-oidc-demo.com
 #access docker container via protected path
 http://ngx-oidc-demo.com/protected
 
+# Example : headers available on successful JWT validation
+````````````````````
+X-OIDC-VALIDATE-STATUS = 	success
+X-OIDC-ISSUER = 	https://accounts.google.com
+X-OIDC-SUBJECT = 	113146716035256978692
+X-OIDC-AUDIENCE = 	282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com
+X-OIDC-NONCE = 	a44df6ae-27f2-4c92-85e1-a22eb6381f53
+X-OIDC-EMAIL = 	xxxx@domain.com
+````````````````````
 
 # Main Configuration
 ````````````````````
@@ -195,7 +204,8 @@ openid-connect configuration : oidc-conf.xml
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
-     <pageActions>
+ 	 <!-- specify collection of actions inside the pageActions -->
+     <pageActions>	<!-- start of page-actions -->
  
 		<!-- nginx authz handlers -->
 	    <action id="oidc_version"><handler>oidc_version</handler></action>
@@ -205,56 +215,59 @@ openid-connect configuration : oidc-conf.xml
 	    <action id="oidc_rewrite_match"><handler>oidc_rewrite_match</handler></action>
 	    <action id="oidc_headers"><handler>oidc_headers</handler></action>	    
 	    <action id="oidc_index"><handler>oidc_index</handler></action>
-	    
-	    <!-- post auth phase id_token validation actions -->
-		<action id="oidc-login">
-		    <description>oidc login</description>
-		    <isForward>false</isForward>
-		    <regex>(.*)</regex>
-			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r]]></uri>
-		</action>
-		<action id="oidc-login2"><!-- strip id_token from outgoig request -->
-		    <description>oidc login</description>
-		    <isForward>false</isForward>
-		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
-		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r]]></uri>
-		</action>
-		<action id="oidc_show_error">
-		    <description>error returned from idp</description>
-		    <isForward>false</isForward>
-		    <response code="412" contentType="application/json"><![CDATA[{"responsecode":412, "description":"Error occured, see query param for description"}]]></response>
-		</action>
-	    
-	    
-    </pageActions>
 
-	<matchLists>
-	    <matchList name="invalid_id_token">
-	        <match>
-	          	<path>id_token=</path>
-				<header name="X-OIDC-VALIDATE-STATUS">failure</header>
-	        </match>
-	    </matchList>
-	    <matchList name="oidc_session_missing">
-	        <match>
-				<header name="X-OIDC-VALIDATE-STATUS" isregex="true">nil</header>
-	        </match>
-	    </matchList>
-	    <matchList name="oidc_session_invalid">
-	        <match>
-              <header name="X-OIDC-VALIDATE-STATUS">failure</header>
-	        </match>
-	    </matchList>
-	    <matchList name="oidc_idp_error">
-	        <match>
-				<path>error=</path>
-	        </match>
-	    </matchList>
-	</matchLists>
+        <action id="$$unique-action-name1$$" debug=$$true/false$$><!-- echo hostname of front-end box and/or echoes backend proxied box if its proxy request-->
+    	    <description>describe what action does in few words</description> <!-- string -->
+            <isForward>true/false</isForward> <!-- boolean set it to true if its internal redirect, false for 302 redirect, default value true -->
+            <isPermanent>true/false</isPermanent> <!-- boolean, set it to true if permanent redirect 301 -->
+            <regex>$$regex-to-generate-tokens-to-build-below-url$$</regex> <!-- string -->
+            <advancedTemplate>true/false</advancedTemplate> <!-- string, set to true of below url is dynamically generated using advanced tokens -->
+            <methods-allowed>$$command separated list of methods allow to proxy$$</methods-allowed> <!-- string -->
+            <uri>$$target-path1</uri> <!-- string, specify relative url if internal redirect or full path if external redirect 302 -->
+    		<requestHeaders> <!-- array of header -->
+        		<header name="$$header-name$$" do="add|set|append|merge|unset" matchList="$$match-list-name$$">$$header-value$$</header>
+    		</requestHeaders>
+    		<responseheaders> <!-- array of header -->
+        		<header name="$$header-name$$" do="add|set|append|merge|unset" matchList="$$match-list-name$$">$$header-value$$</header>
+    		</responseheaders>                                 
+        </action>                                                     
+    </pageActions><!-- end of page-actions -->
+
+    <!-- matchLists are collection of individual matchList -->
+    <!-- matchList is collection of individual matches evaluates as match1 OR match2 OR match3 ...  -->
+    <!-- match is collection of individual conditions evaluates as host AND ip AND event AND header1 AND heder2 AND env1 ... -->
+    <matchLists>  <!-- start of match-lists -->
+       <!-- matchList returns true upon first match ie.evaluates condition as match1 OR match2 OR ... -->
+       <matchList name="$$matchlist-name1$$">
+       	    <!-- match return true if all elements matches ie.evaluates condition as host AND ip AND header1 AND header2 ... -->
+       	    <!-- Any unspecified tag in match is considered matched ie if unspecified host matches all host  -->
+            <match host=”$$host-name-regex$$”>
+                <host>$$host-name-regex$$</host> <!-- string -->
+            	<ip isregex="true/false" negate="true/false">$$client-ip-address-regex-or-string$$</ip> <!-- string -->
+            	<path negate="true/false">$$path-regex-or-string$$</path> <!-- string -->
+            	<event start="$$start-time$$" end="$$end-time$$" /> <!-- date time string ddd mmm MM HH:MM:SS YYYY format -->
+                <header name="$$header-name1$$" isregex="$$true/false$$" negate=$$true/false$$ delimAnd="$$delimitor$$" >$$header-value1$$</header> 
+                <header name="$$header-name2$$" isregex="$$true/false$$" negate=$$true/false$$ delimAnd="$$delimitor$$" >$$header-value2$$</header>
+                .	.	. 
+            </match>
+            <match> <!-- match2 -->
+            </match>
+            <match> <!-- match3 -->
+            </match>
+        </matchList>
+       <matchList name="$$matchlist-name1$$">
+            <match host=”$$host-name$$”> 
+                <header name="$$header-name1$$">$$header-value1$$</header> 
+                <header name="$$header-name2$$">$$header-value2$$</header>
+                .	.	. 
+            </match> 
+        </matchList>
+        .	.	.
+    </matchLists>
 	
-	<pathMappings>
+    <!-- pathMappings are collection of individual mappings -->
+    <!-- mappings is associated to source path and list of actions to choose  -->
+    <pathMappings> <!-- array -->
 		<!-- nginx authz handlers to verify oidc information, mainly for debug purpose -->
 	    <mapping path="^/oidc/version"><postAuthAction>oidc_version</postAuthAction></mapping>
 	    <mapping path="^/oidc/config-status"><postAuthAction>oidc_config_core_status</postAuthAction></mapping>
@@ -265,21 +278,42 @@ openid-connect configuration : oidc-conf.xml
 	    <mapping path="^/oidc"><postAuthAction>oidc_index</postAuthAction></mapping>
 	    <!-- end of nginx authz-->
         
-        <!-- id_token authorization rules -->
-	    <mapping path="^/protected" >
-			<postAuthAction matchList="oidc_idp_error">oidc_show_error</postAuthAction>
-			<postAuthAction matchList="invalid_id_token">oidc-login2</postAuthAction>
-			<postAuthAction matchList="oidc_session_missing">oidc-login</postAuthAction>
-			<postAuthAction matchList="oidc_session_invalid">oidc-login</postAuthAction>
-	    </mapping>
-        <!-- end of id_token authorization rules -->
-        	            
-	</pathMappings>
+        <mapping path="$$source-path-regex$$" matchLists="$$comma separated list of matchList$$" ignoreCase="true/false">
+                <postAuthAction matchList=$$matchlist to select this action$$>one of the action in above actions-list-1</postAuthAction>
+                <postAuthAction matchList=$$matchlist to select this action$$>one of the action in above actions-list-2</postAuthAction>
+                .	.	.
+                <postAuthAction>last action, its default action if above action don't match</postAuthAction>
+        </mapping>
+		.	.	.                                                                 
+    </pathMappings> <!-- end of pathMappings -->
 </oidcConfig>
 
 ```
 
-More documentation to be followed:
+**mapping** source url 
+- **path**  specifies uri patterns match on source uri
+
+- **postAuthAction** specifies action taken in authorization where it can use all the x-oidc-* headers avaiable in the request
+
+- **matchLists** specifies the condition
+
+**action** target action on source url
+- **description** specifies what action is all about in couple of words
+
+- **isForward**  specifies internal forwared/redirect if set to true
+
+- **uri** specifies the target url which can be generated from source url
+- **advancedTemplate** specifies advanced usage to generate target url using various kind of format.
+  Target url : <uri>http://hostname:port/myurl/%{format}<format-tag></uri>
+
+Following format-tags are supported.
+
+               'r', requestVariables, 
+               's', serverVariables,
+               'c', requestCookie, 
+               'u', urlDecodeToken, 
+               'U', urlEncodeToken, 
+               'q', requestQuery
 
 Development
 ------------
