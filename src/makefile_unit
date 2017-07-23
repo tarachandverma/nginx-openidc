@@ -3,7 +3,7 @@ CXX=g++
 
 APACHE_UTILS_INC=-I./apache-utils
 
-DEP_EXT_PATH=./dependencies
+DEP_EXT_PATH=./
 DEP_INCLUDE=-I$(DEP_EXT_PATH)/include
 CURL_HOME=$(DEP_EXT_PATH)/curl-7.16.0
 CURL_INC=$(CURL_HOME)/include
@@ -22,11 +22,6 @@ XML_SRC= ./xml-core/xml_core.c \
 ./xml-core/token_utils.c
 
 SERVICE_UTILS_INC= -I./service-utils
-
-SVCMON_INC=-I./service-utils/service-monitor
-SVCMON_SRC= \
-./service-utils/service-monitor/service_template_http.c \
-./service-utils/service-monitor/service_monitor.c
 
 HTTP_UTILS_INC=-I./service-utils/http-utils -I$(CURL_INC)
 HTTP_UTILS_SRC=./service-utils/http-utils/http_client.c
@@ -86,7 +81,6 @@ $(OIDC_CORE_INC) \
 $(CONFIG_CORE_INC) \
 $(JSON_API_CORE_INC) \
 $(SERVICE_UTILS_INC) \
-$(SVCMON_INC) \
 $(TEMPLATE_CORE_INC)
 
 CCC_SRC=./unit-test/runalltest.c \
@@ -103,7 +97,6 @@ $(OIDC_CORE_SRC) \
 $(OIDC_GLOBALS_SRC) \
 $(CONFIG_CORE_SRC) \
 $(JSON_API_CORE_SRC) \
-$(SVCMON_SRC) \
 $(TEMPLATE_CORE_SRC)
 
 CXX_SRC= $(JSON_API_CORE_SRC_CXX)
@@ -121,25 +114,14 @@ LBITS := $(shell getconf LONG_BIT)
 OSTYPE:= $(shell uname)
 ifeq ($(OSTYPE),Darwin)
 		APR_INC=/usr/include/apr-1
-		APACHE_INC=/usr/include/apache2
-		CFLAGS=-m32 -g -fprofile-arcs -ftest-coverage -Wall -D_REENTRANT -DVERSION_2_2 -DNGX_DJREWRITE_PCRE
+		CFLAGS=-m32 -g -fprofile-arcs -ftest-coverage -Wall -D_REENTRANT -DNGX_TCREWRITE_PCRE
 		LDFLAGS=-m32 -L/usr/lib  -lpthread -Bdynamic -lm -ldl -lldap -lcrypto -lssl -lz -lexpat -lcurl -lpcre -lapr-1 -laprutil-1			
 else
-	ifeq ($(LBITS),64)
 		APR_INC=/usr/include/apr-1
-		APACHE_INC=/usr/include/apache2
 		APR_LIB_UTIL=
 		APR_LIB=
-		CFLAGS=-g -fPIC -fprofile-arcs -ftest-coverage -DLINUX=22 -D_REENTRANT -DVERSION_2_2 -DNGX_DJREWRITE_PCRE
+		CFLAGS=-g -fPIC -fprofile-arcs -ftest-coverage -DLINUX=22 -D_REENTRANT -DNGX_TCREWRITE_PCRE
 		LDFLAGS=-L/usr/lib64  -lpthread -Bdynamic -lm -luuid -ldl -lssl -lcurl -lz -lpcreposix -lpcre -lapr-1 -laprutil-1 -lstdc++ -lldap -lgcov -lrt
-	else
-		APR_INC=/opt/apache2.0/include
-		APACHE_INC=
-		APR_LIB_UTIL=/opt/apache2.0/lib/libaprutil-0.a
-		APR_LIB=/opt/apache2.0/lib/libapr-0.a
-		CFLAGS=-g -fprofile-arcs -ftest-coverage -DLINUX=22 -D_REENTRANT -DNGX_DJREWRITE_PCRE 
-		LDFLAGS=-L/usr/lib  -lpthread -Bdynamic -lm -lidn -ldl -luuid -lz -lpcreposix -lpcre -lldap_r -llber -lgcov -lrt
-	endif
 endif
 
 all: compile zerocounters run coverage
@@ -152,11 +134,11 @@ all: compile zerocounters run coverage
 
 # define a suffix rule for .c -> .o
 .c.o:
-	$(CCC) $(CFLAGS) -I$(APR_INC) -I$(APACHE_INC) $(COMMON_INC) -c $< -o $*.o
+	$(CCC) $(CFLAGS) -I$(APR_INC) $(COMMON_INC) -c $< -o $*.o
 	
 # define a suffix rule for .cpp -> .o
 .cpp.o :
-	$(CXX) $(CFLAGS) -I$(APR_INC) -I$(APACHE_INC) $(COMMON_INC) -c $< -o $*.o
+	$(CXX) $(CFLAGS) -I$(APR_INC) $(COMMON_INC) -c $< -o $*.o
 
 ifeq ($(OSTYPE),Darwin)
 compile: $(CCC_OBJ) $(CXX_OBJ) $(GCOV_OBJ)

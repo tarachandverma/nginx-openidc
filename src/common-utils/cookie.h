@@ -5,7 +5,6 @@
 #endif
 		
 #include <sys/types.h>
-#include <apache_mappings.h>
 #include <shm_data.h>
 #include <shm_apr.h>
 

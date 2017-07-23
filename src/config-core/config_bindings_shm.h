@@ -1,6 +1,5 @@
 #ifndef CONFIG_BINDINGS_SHM_H_
 #define CONFIG_BINDINGS_SHM_H_
-#include <apache_mappings.h>
 #include <shm_data.h>
 #include <shm_apr.h>
 #include <config-core/config_bindings.h>

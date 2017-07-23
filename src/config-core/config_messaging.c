@@ -140,18 +140,18 @@
 		}
 	}
 	
-	typedef struct djrewrite_messaging_proc_rec{
+	typedef struct openidc_messaging_proc_rec{
 		char* logDir;
 		void* userdata;
 		cfgm_init_messaging_func initFunc;
 		cfgm_message_recieved_func msgRecFunc;
 		apr_proc_t* proc;
-	}djrewrite_messaging_proc_rec;
+	}openidc_messaging_proc_rec;
 	
-	static djrewrite_messaging_proc_rec*cfgm_newMessagingProcRecObj(pool* p, char* logDir,
+	static openidc_messaging_proc_rec*cfgm_newMessagingProcRecObj(pool* p, char* logDir,
 		void* userdata,
 		cfgm_init_messaging_func initFunc, cfgm_message_recieved_func msgRecFunc){
-		djrewrite_messaging_proc_rec* mpr=(djrewrite_messaging_proc_rec*)apr_palloc(p,sizeof(djrewrite_messaging_proc_rec));
+		openidc_messaging_proc_rec* mpr=(openidc_messaging_proc_rec*)apr_palloc(p,sizeof(openidc_messaging_proc_rec));
 		mpr->logDir = logDir;
 		mpr->userdata = userdata;
 		mpr->initFunc = initFunc;
@@ -161,11 +161,11 @@
 	}
 	
 	pool* root_mpr_pool = NULL;	// root process pool created by root process
-	void cfgm_startMessagingProcess(djrewrite_messaging_proc_rec*msg,int disableProcessRecovery);
+	void cfgm_startMessagingProcess(openidc_messaging_proc_rec*msg,int disableProcessRecovery);
 
 #if 0/*APR_HAS_OTHER_CHILD && !NGX_HTTP_OPENIDC*/
 	static void cfgm_messageProcessRestartCallback(int reason, void *data, apr_wait_t status) {
-		djrewrite_messaging_proc_rec* mpr = (djrewrite_messaging_proc_rec*)data;
+		openidc_messaging_proc_rec* mpr = (openidc_messaging_proc_rec*)data;
 		int mpm_state;
 		int stopping;
 
@@ -183,7 +183,7 @@
 					stopping = 0;
 				}
 				if (!stopping) {
-					ap_log_error(APLOG_MARK, APLOG_ERR, 0, NULL, "djrewrite refresh recieved APR_OC_REASON_DEATH, restarting");
+					ap_log_error(APLOG_MARK, APLOG_ERR, 0, NULL, "openidc refresh recieved APR_OC_REASON_DEATH, restarting");
 					if(mpr!=NULL){
 						cfgm_startMessagingProcess(mpr,FALSE);
 					}
@@ -198,7 +198,7 @@
 			case APR_OC_REASON_LOST:
 				/* Restart the child messaging processor as we lost it */
 				apr_proc_other_child_unregister(data);
-				ap_log_error(APLOG_MARK, APLOG_ERR, 0, NULL, "djrewrite refresh recieved APR_OC_REASON_LOST");
+				ap_log_error(APLOG_MARK, APLOG_ERR, 0, NULL, "openidc refresh recieved APR_OC_REASON_LOST");
 				cfgm_startMessagingProcess(mpr, FALSE);
               	break;
               
@@ -214,7 +214,7 @@
    }
 #endif
 
-	void cfgm_startMessagingProcess(djrewrite_messaging_proc_rec*mpr, int disableProcessRecovery){
+	void cfgm_startMessagingProcess(openidc_messaging_proc_rec*mpr, int disableProcessRecovery){
 		apr_status_t rv;
 		void* localConfig=NULL;
 		if((rv=apr_proc_fork(mpr->proc,root_mpr_pool))==APR_INCHILD){
@@ -237,7 +237,7 @@
 			cfgm_init_messaging_func initFunc, cfgm_message_recieved_func msgRecFunc,
 			int disableProcessRecovery){
 		root_mpr_pool = p;
-		djrewrite_messaging_proc_rec* mpr = cfgm_newMessagingProcRecObj(root_mpr_pool, logDir, userdata, initFunc, msgRecFunc);
+		openidc_messaging_proc_rec* mpr = cfgm_newMessagingProcRecObj(root_mpr_pool, logDir, userdata, initFunc, msgRecFunc);
 		cfgm_startMessagingProcess(mpr, disableProcessRecovery);
 		return mpr->proc;	
 	}

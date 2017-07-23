@@ -2,12 +2,16 @@
 <oidcConfig>
 	<!-- OpenID-Connect Provider metadata url -->	 
 	 <oidcProvider>
-	 	<metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl>
+	 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
+	 	<issuer>https://accounts.google.com</issuer>
+	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
+	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
+	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	 		 	
 	 </oidcProvider>
 
 	<!-- relying parties configuration -->
 	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="xxxxxxxxxxx" domain=".com" validateNonce="true">
+	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" domain=".com" validateNonce="true">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
 	 	</relyingParty>
@@ -16,7 +20,7 @@
 	 
      <pageActions>
  
-		<!-- nginx authz handlers -->
+		<!-- nginx oidc internal verification handlers for what's configuration params are loaded in memory -->
 	    <action id="oidc_version"><handler>oidc_version</handler></action>
 	    <action id="oidc_config_core_status"><handler>oidc_config_core_status</handler></action>
 	    <action id="oidc_rewrite_pageactions"><handler>oidc_rewrite_pageactions</handler></action>
@@ -31,22 +35,36 @@
 		    <isForward>false</isForward>
 		    <regex>(.*)</regex>
 			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r&state=($0U)]]></uri>
 		</action>
-		<action id="oidc-login2"><!-- strip id_token from outgoig request -->
+		<action id="oidc-login-strip-invalid-token"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
 		    <isForward>false</isForward>
 		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
 		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r]]></uri>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r&state=($0U)]]></uri>
 		</action>
 		<action id="oidc_show_error">
 		    <description>error returned from idp</description>
 		    <isForward>false</isForward>
 		    <response code="412" contentType="application/json"><![CDATA[{"responsecode":412, "description":"Error occured, see query param for description"}]]></response>
 		</action>
-	    
-	    
+		<action id="oidc_show_success">
+		    <description>error returned from idp</description>
+		    <isForward>false</isForward>
+		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you are successfully able to access this page"}]]></response>
+		</action>		
+		<action id="goto-resource">
+		    <description>send to resource sent in state</description>
+		    <isForward>false</isForward>
+			<advancedTemplate>true</advancedTemplate>		    
+		    <uri><![CDATA[%{state}q]]></uri>
+		</action>
+		<action id="oidc_api_success">
+		    <description>api success returned from idp</description>
+		    <isForward>false</isForward>
+		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you emailAddress is %{HTTP_X-OIDC-EMAIL}r"}]]></response>
+		</action>		
     </pageActions>
 
 	<matchLists>
@@ -84,14 +102,31 @@
 	    <mapping path="^/oidc"><postAuthAction>oidc_index</postAuthAction></mapping>
 	    <!-- end of nginx authz-->
         
-        <!-- id_token authorization rules -->
+        <!-- JWT based authorization rules -->
+        <!-- protected url which you want to trigger login action -->
 	    <mapping path="^/protected" >
 			<postAuthAction matchList="oidc_idp_error">oidc_show_error</postAuthAction>
-			<postAuthAction matchList="invalid_id_token">oidc-login2</postAuthAction>
+			<postAuthAction matchList="invalid_id_token">oidc-login-strip-invalid-token</postAuthAction>
 			<postAuthAction matchList="oidc_session_missing">oidc-login</postAuthAction>
 			<postAuthAction matchList="oidc_session_invalid">oidc-login</postAuthAction>
+			<postAuthAction>oidc_show_success</postAuthAction>			
 	    </mapping>
-        <!-- end of id_token authorization rules -->
+        <!-- end of JWT authorization rules -->
+        
+        <!-- redirect_uri aka callback handling -->
+	    <mapping path="^/oauth2/callback\?(.*)error=">
+			<postAuthAction>oidc_show_error</postAuthAction>			
+	    </mapping>
+	    <mapping path="^/oauth2/callback\?(.*)state=">
+			<postAuthAction>goto-resource</postAuthAction>			
+	    </mapping>   
+        <!-- end of callback rules -->
+        
+        <!-- APIs authorizatioin -->        
+	    <mapping path="^/api/user.email\?id_token=">
+			<postAuthAction matchList="oidc_session_invalid">oidc_show_error</postAuthAction>
+			<postAuthAction>oidc_api_success</postAuthAction>				
+	    </mapping>        
         	            
 	</pathMappings>
 </oidcConfig>

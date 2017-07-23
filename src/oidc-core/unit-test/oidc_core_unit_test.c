@@ -1,19 +1,3 @@
-/**
- *
- * Copyright 2005 LogicBlaze Inc.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -110,7 +94,7 @@ static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* head
 	return jwk;
 }
 
-void amx_loadConfFile_test(mm_logger* logger, CuTest*tc){
+void oidc_loadConfFile_test(mm_logger* logger, CuTest*tc){
 	pool* p=logger->p;
 	shared_heap* sheap=NULL;
 	char* error=NULL;
@@ -125,9 +109,8 @@ void amx_loadConfFile_test(mm_logger* logger, CuTest*tc){
 
 	// create resource service.
 	rs=cb_newServiceDescriptorObj(p);
-	rs->uri=apr_pstrdup(p,"http://127.0.0.1:8085/alfresco/webdav/Configuration/Published/Entitlements/mod_mon");
+	rs->uri=apr_pstrdup(p,"https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/");
 	rs->timeoutSeconds=5;
-	rs->userColonPass=apr_pstrdup(p,"mod_mon:djcs6.0D");
 
 	sheap=shdata_sheap_make(p,200000,"./unit-test/oidc.shm");
 	shdata_BeginTagging(sheap);
@@ -135,7 +118,6 @@ void amx_loadConfFile_test(mm_logger* logger, CuTest*tc){
 
 	//build globals
 	globals=(cbs_globals*)shdata_shpcalloc(sheap,sizeof(cbs_globals));
-	globals->nameSpace=shdata_32BitString_copy(sheap,"sat2-id-wsj");
 	globals->homeDir=shdata_32BitString_copy(sheap,"./unit-test");
 	globals->resourceService=cbs_copyServiceDescripterOnSheap(p,sheap,rs);
 
@@ -346,7 +328,7 @@ CuSuite* oidccore_GetSuite() {
   SUITE_ADD_TEST(suite, rc_matchByStringsReturnDetailsTest);
   SUITE_ADD_TEST(suite, rc_matchByStringsPatternTest);
   SUITE_ADD_TEST(suite, rc_isRegexValidTest);
-  SUITE_ADD_TEST(suite, amx_loadConfFile_test);
+  SUITE_ADD_TEST(suite, oidc_loadConfFile_test);
   SUITE_ADD_TEST(suite, oauthutil_generateAndParseAndValidateIDToken_test);
   SUITE_ADD_TEST(suite, oauthutil_parseAndValidateExpiredIDToken_test);
   SUITE_ADD_TEST(suite, oauthutil_parseAndValidateGoogleIDToken_test);

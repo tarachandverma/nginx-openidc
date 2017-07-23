@@ -5,10 +5,10 @@
 #ifdef NGX_TCREWRITE_PCRE
     #include <pcre.h>
 	#include <pcreposix.h>
-	static void * iota_pcre_malloc(size_t size);
-	static void iota_pcre_free(void *ptr);
-	static pool* iota_pcre_malloc_init(pool *new_pool);
-	static void iota_pcre_malloc_done(pool *old_pool);
+	static void * oidc_pcre_malloc(size_t size);
+	static void oidc_pcre_free(void *ptr);
+	static pool* oidc_pcre_malloc_init(pool *new_pool);
+	static void oidc_pcre_malloc_done(pool *old_pool);
 #else // APACHE PCRE
 	#include "httpd.h"
 
@@ -49,13 +49,13 @@
 				preg=apr_palloc(p,sizeof(regex_t));
 		#ifdef NGX_TCREWRITE_PCRE
 				// set custom pcre func for NGX_TCREWRITE_PCRE
-				pool *ip = (pool *) iota_pcre_malloc_init(p);
+				pool *ip = (pool *) oidc_pcre_malloc_init(p);
 		#endif
 				ret=regcomp(preg,regex,0);
 				if(ret!=0){
 		#ifdef NGX_TCREWRITE_PCRE
 					// reset pcre func for NGX_PCRE
-					iota_pcre_malloc_done(ip);
+					oidc_pcre_malloc_done(ip);
 		#endif
 					return -555;
 				}
@@ -65,7 +65,7 @@
 
 		#ifdef NGX_TCREWRITE_PCRE
 				// reset pcre func for NGX_TCREWRITE_PCRE
-				iota_pcre_malloc_done(ip);
+				oidc_pcre_malloc_done(ip);
 		#endif
 				return ret;
 			}
@@ -79,14 +79,14 @@
 
 		#ifdef NGX_TCREWRITE_PCRE
 				// set custom pcre func for NGX_TCREWRITE_PCRE
-				pool *ip = (pool *) iota_pcre_malloc_init(p);
+				pool *ip = (pool *) oidc_pcre_malloc_init(p);
 		#endif
 
 				ret=regcomp(preg,regex,REG_ICASE);
 				if(ret!=0){
 		#ifdef NGX_TCREWRITE_PCRE
 					// reset pcre func for NGX_TCREWRITE_PCRE
-					iota_pcre_malloc_done(ip);
+					oidc_pcre_malloc_done(ip);
 		#endif
 					return -555;
 				}
@@ -95,7 +95,7 @@
 				regfree(preg);
 		#ifdef NGX_TCREWRITE_PCRE
 				// reset pcre func for NGX_TCREWRITE_PCRE
-				iota_pcre_malloc_done(ip);
+				oidc_pcre_malloc_done(ip);
 		#endif
 				return ret;
 			}
@@ -117,14 +117,14 @@
 
 		#ifdef NGX_TCREWRITE_PCRE
 				// set custom pcre func for NGX_TCREWRITE_PCRE
-				pool *ip = (pool *) iota_pcre_malloc_init(p);
+				pool *ip = (pool *) oidc_pcre_malloc_init(p);
 		#endif
 
 				ret=regcomp(preg,regex,0);
 				if(ret!=0){
 		#ifdef NGX_TCREWRITE_PCRE
 					// reset pcre func for NGX_TCREWRITE_PCRE
-					iota_pcre_malloc_done(ip);
+					oidc_pcre_malloc_done(ip);
 		#endif
 					return -555;
 				}
@@ -152,7 +152,7 @@
 
 		#ifdef NGX_TCREWRITE_PCRE
 				// reset pcre func for NGX_TCREWRITE_PCRE
-				iota_pcre_malloc_done(ip);
+				oidc_pcre_malloc_done(ip);
 		#endif
 				return ret;
 			}
@@ -201,7 +201,7 @@
 
 #ifdef NGX_TCREWRITE_PCRE
 
-pool* iota_pcre_pool=NULL;
+pool* oidc_pcre_pool=NULL;
 
 static void *(*old_pcre_malloc)(size_t);
 static void (*old_pcre_free)(void *ptr);
@@ -212,10 +212,10 @@ static void (*old_pcre_free)(void *ptr);
  * * and nginx overwrote pcre_malloc/free hooks with its own static
  * * functions, so nobody else can reuse nginx regex subsystem... */
 
-static void * iota_pcre_malloc(size_t size)
+static void * oidc_pcre_malloc(size_t size)
 {
-	if (iota_pcre_pool) {
-		return apr_palloc(iota_pcre_pool, size);
+	if (oidc_pcre_pool) {
+		return apr_palloc(oidc_pcre_pool, size);
 	}
 
 	fprintf(stderr, "error: iota pcre malloc failed due to empty pcre pool");
@@ -224,9 +224,9 @@ static void * iota_pcre_malloc(size_t size)
 }
 
 
-static void iota_pcre_free(void *ptr)
+static void oidc_pcre_free(void *ptr)
 {
-	if (iota_pcre_pool) {
+	if (oidc_pcre_pool) {
 		//apr_pool_clear(ptr);
 		return;
 	}
@@ -235,33 +235,33 @@ static void iota_pcre_free(void *ptr)
 }
 
 
-static pool* iota_pcre_malloc_init(pool *new_pool)
+static pool* oidc_pcre_malloc_init(pool *new_pool)
 {
 	pool* old_pool;
 
-	if (pcre_malloc != iota_pcre_malloc) {
+	if (pcre_malloc != oidc_pcre_malloc) {
 
-		iota_pcre_pool = new_pool;
+		oidc_pcre_pool = new_pool;
 
 		old_pcre_malloc = pcre_malloc;
 		old_pcre_free = pcre_free;
 
-		pcre_malloc = iota_pcre_malloc;
-		pcre_free = iota_pcre_free;
+		pcre_malloc = oidc_pcre_malloc;
+		pcre_free = oidc_pcre_free;
 
 		return NULL;
 	}
 
-	old_pool = iota_pcre_pool;
-	iota_pcre_pool = new_pool;
+	old_pool = oidc_pcre_pool;
+	oidc_pcre_pool = new_pool;
 
 	return old_pool;
 }
 
 
-static void iota_pcre_malloc_done(pool *old_pool)
+static void oidc_pcre_malloc_done(pool *old_pool)
 {
-    iota_pcre_pool = old_pool;
+    oidc_pcre_pool = old_pool;
 
     if (old_pool == NULL) {
         pcre_malloc = old_pcre_malloc;

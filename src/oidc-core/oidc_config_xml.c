@@ -1,4 +1,3 @@
-#include <apache_mappings.h>
 #include <xml_core.h>
 #include <string.h>
 #include <stdio.h>

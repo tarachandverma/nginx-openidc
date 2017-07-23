@@ -9,7 +9,7 @@
 #include <apr_strings.h>
 #include <apr_tables.h>
 
-#define HTTP_USER_AGENT	"djrewrite-libcurl"
+#define HTTP_USER_AGENT	"openidc-libcurl"
 	typedef struct http_util_result {
 	   char *data;
 	   char *content_type; 

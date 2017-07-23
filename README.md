@@ -96,7 +96,7 @@ OPENIDC_LogFile                        oidc-refresh.log;
 OPENIDC_SharedMemory  file=/config.shm size=61000;
 OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
 OPENIDC_PassPhrase                     abc123;
-OPENIDC_HeaderPrefix                   X-REMOTE-;
+OPENIDC_HeaderPrefix                   X-OIDC-;
 OPENIDC_ConfigFile                     oidc-config.xml;
 
 ````````````````````

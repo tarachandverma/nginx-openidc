@@ -1,7 +1,6 @@
 #ifndef __TCREWRITE_SHM_APR__H_
 #define __TCREWRITE_SHM_APR__H_
 #include <sys/types.h>
-#include <apache_mappings.h>
 #include <shm_data.h>
 
 #ifdef __cplusplus
