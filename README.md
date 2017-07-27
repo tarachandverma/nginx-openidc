@@ -97,6 +97,7 @@ OPENIDC_SharedMemory  file=/config.shm size=61000;
 OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
 OPENIDC_PassPhrase                     abc123;
 OPENIDC_HeaderPrefix                   X-OIDC-;
+OPENIDC_RefreshWaitSeconds             20;
 OPENIDC_ConfigFile                     oidc-config.xml;
 
 ````````````````````
@@ -125,6 +126,12 @@ Specifies passPhrase to encrypt/decrypt relying party session
 
 Specifies custom headers prefix for the claims, default:X-OIDC-
 
+- **OPENIDC_RefreshWaitSeconds (mendatory if OP signing keys are rotating )**
+
+This will refresh entire oidc-config.xml remote repository defined by OPENIDC_RemotePath along with OP publicKeys 
+defined by <jwksUri> in oidc-config.xml
+default:no refresh
+
 - **OPENIDC_ConfigFile**
 
 Specify relying party configuration and custom post Authorization response and rules
@@ -143,6 +150,7 @@ http {
 	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
 	OPENIDC_PassPhrase                     abc123;
 	OPENIDC_HeaderPrefix                   X-REMOTE-;
+	#OPENIDC_RefreshWaitSeconds				20;
 	OPENIDC_ConfigFile                     oidc-config.xml;
 	
 	server {
@@ -167,13 +175,23 @@ openid-connect configuration : oidc-conf.xml
 <oidcConfig>
 	<!-- OpenID-Connect Provider metadata url -->	 
 	 <oidcProvider>
-	 	<metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl>
+	 	<metadataUrl>$$OP metadata url$$</metadataUrl>
 		<!--you can set individua params as well if metadata is not available -->
-	 	<issuer>https://accounts.google.com</issuer>
-	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
-	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
-	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri><!-- json web keys url exposed by OP, useful if keys are rotated by OP -->
+	 	<issuer>$$OP issuer$$</issuer>
+	 	<authorizationEndpoint>$$OP authorization_end_point$$</authorizationEndpoint>
+	 	<tokenEndpoint>$$OP token_end_point same as defined in nginx.conf's proxy_pass for token endpoint$$</tokenEndpoint>
+	 	<jwksUri>$$OP json web keys end poing$$</jwksUri><!-- json web keys url exposed by OP, useful if keys are rotated by OP -->
 	 	<!-- json web keys in JSON format, useful if keys are not rotated by OP -->
+	 	<jwksJson><![CDATA[{
+ "keys": [
+  $$key1 json$$,
+  $$key2 json$$,
+  $$key3 json$$,
+  ...
+  $$keyn json$$
+ ]
+}]]></jwksJson>
+	<!-- example -->	 	
 	 	<!--jwksJson><![CDATA[{
  "keys": [
   {

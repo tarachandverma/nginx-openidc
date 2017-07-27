@@ -67,6 +67,7 @@ typedef struct {
   int					remotePathTimeout;
   char* 				passPhrase;
   char* 				oidcHeaderPrefix;
+  int 					refreshWaitSeconds;
   char* 				oidcConfigFile;
   oidc_config* 		oidcConfig;
   config_core* 			configCore;
@@ -83,6 +84,7 @@ typedef struct {
     ngx_str_t 	passPhrase;
     ngx_str_t 	oidcHeaderPrefix;
     ngx_str_t 	oidcConfigFile;
+    ngx_int_t	refreshWaitSeconds;
     Config* config;
 } ngx_http_openidc_srv_conf_t;
 
@@ -301,6 +303,22 @@ ngx_http_openidc_set_header_prefix(ngx_conf_t *cf, ngx_command_t *cmd, void *con
     return NGX_CONF_OK;
 }
 
+static char *
+ngx_http_openidc_set_refresh_wait(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+	ngx_http_openidc_srv_conf_t *sscf = conf;
+
+    ngx_str_t                  *value, *url;
+
+    value = cf->args->elts;
+    url = &value[1];
+
+    sscf->refreshWaitSeconds= ngx_atoi(value[1].data, value[1].len);
+//	printf("ngx_http_openidc_set_header_prefix:%d", getpid());
+
+    return NGX_CONF_OK;
+}
+
 typedef struct ce_error_list{
 	apr_array_header_t* data;
 }ce_error_list;
@@ -401,6 +419,7 @@ static void ngx_http_openidc_postConfigStarting(apr_pool_t* p, const char* defn_
 		ccore->passPhrase=apr_pstrdup(p,config->passPhrase);
 		ccore->cipherConfig->crypto_passphrase=ccore->passPhrase;
 		ccore->oidcHeaderPrefix=apr_pstrdup(p,config->oidcHeaderPrefix);
+		ccore->refreshWaitSeconds=config->refreshWaitSeconds;
 		ccore->oidcConfigFile=apr_pstrdup(p,config->oidcConfigFile);
 
 		ce_addErrorWithType(p,errorList,"Config Core Load File",error);
@@ -479,6 +498,8 @@ ngx_http_openidc_set_configcore_file(ngx_conf_t *cf, ngx_command_t *cmd, void *c
 			? apr_pstrndup(mainPool, (char*)sscf->oidcHeaderPrefix.data, sscf->oidcHeaderPrefix.len)
 			: apr_pstrdup(mainPool, "X-OIDC-");
 
+	sscf->config->refreshWaitSeconds=(sscf->refreshWaitSeconds>0) ? sscf->refreshWaitSeconds : 0;
+
 	sscf->config->oidcConfigFile = (sscf->oidcConfigFile.len>0)
 			? apr_pstrndup(mainPool, (char*)sscf->oidcConfigFile.data, sscf->oidcConfigFile.len)
 			: apr_pstrdup(mainPool, "oidc-config.xml");
@@ -526,7 +547,13 @@ static ngx_command_t  ngx_http_openidc_commands[] = {
 	  NGX_HTTP_SRV_CONF_OFFSET,
 	  0,
 	  NULL },
-    { ngx_string("OPENIDC_ConfigFile"),
+    { ngx_string("OPENIDC_RefreshWaitSeconds"),
+	  NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE12,
+	  ngx_http_openidc_set_refresh_wait,
+	  NGX_HTTP_SRV_CONF_OFFSET,
+	  0,
+	  NULL },
+	{ ngx_string("OPENIDC_ConfigFile"),
 	  NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE12,
 	  ngx_http_openidc_set_configcore_file,
 	  NGX_HTTP_SRV_CONF_OFFSET,
@@ -636,6 +663,9 @@ ngx_http_openidc_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
 	}
 	if(conf->oidcHeaderPrefix.data==NULL) {
 		conf->oidcHeaderPrefix = prev->oidcHeaderPrefix;
+	}
+	if(conf->refreshWaitSeconds==0) {
+		conf->refreshWaitSeconds = prev->refreshWaitSeconds;
 	}
 	if(conf->oidcConfigFile.data==NULL) {
 		conf->oidcConfigFile = prev->oidcConfigFile;

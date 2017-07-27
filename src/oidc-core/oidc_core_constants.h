@@ -13,7 +13,7 @@ typedef enum {
 
 // token encryption/decryption buffer size
 #define OAUTH_CRYPTO_BUFSIZE				1024
-#define OAUTH_BASE64_BUFSIZE				2048
+#define OAUTH_BASE64_BUFSIZE				4096
 
 // delimiters and wildcard
 #define OAUTH_TOKEN_DELIM      			":"
