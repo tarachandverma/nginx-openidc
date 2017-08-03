@@ -40,13 +40,17 @@ Features
 ------------
 - Supports all OAuth2.0/OpenID-Connect flows
 - Supports HS256 and RS256
-- Caching of RS256 public key to avoid downloading RS256 public key every request.
+- Supports rotated RS256 public key.
 - Implements Access phase which validates id_token(JWT) and passes claims as custom headers
 - Implements Post Authorization phase custom response based on custom headers.
 - Allows multiple relying party based on domain
 - Supports "nonce" generation and validation
 - Supports relying party session
 - Removes custom headers from incoming request to ensure these headers are not spoofed.
+- Unlimited capabilities from Authorization to rewrites
+- Capabilites to add/remove/update request/response headers
+- Capability to generate custom error response
+- Support fo auto refresh entire oidc-config.xml periodically with no server restart
 
 Supported platforms
 --------------------------------------
