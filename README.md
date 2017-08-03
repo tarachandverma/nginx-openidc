@@ -22,10 +22,9 @@ The request flow - Relying Party ( RP )
 The request flow - API authorization
 ------------------------------------
 1. ClientApp gets a JWT from authorized OP or generates a JWT using "client-credentials" flow
-2. The clientApp makes a request for a protected API on `ngx-oidc-demo.com` for resource 
-	http://ngx-oidc-demo.com/api/user.email?id_token=
-	OR
-	http://ngx-oidc-demo.com/api/user.email?id_token=
+2. The clientApp makes a request for a protected API on `ngx-oidc-demo.com` for resource with access_token as "Authorization: Bearer <id_token>" header. 
+Examples
+	http://ngx-oidc-demo.com/api/user.email
 	Authorization: Bearer <id_token received from step(1)>
 3. In "Access" phase of nginx, **nginx-openidc** performs JWT validation.
 4. On success, The **nginx-openidc** sets request headers X-OIDC-* i.e. X-OIDC-SUBJECT, X-OIDC-ISSUER and many more depending on scopes requested from JWT claim.
@@ -90,7 +89,7 @@ X-OIDC-ISSUER = 	https://accounts.google.com
 X-OIDC-SUBJECT = 	113146716035256978692
 X-OIDC-AUDIENCE = 	282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com
 X-OIDC-NONCE = 	a44df6ae-27f2-4c92-85e1-a22eb6381f53
-X-OIDC-EMAIL = 	xxxx@domain.com
+X-OIDC-EMAIL = 	xxxx@gmail.com
 ````````````````````
 
 # Main Configuration
