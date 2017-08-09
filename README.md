@@ -1,6 +1,6 @@
 # nginx-openidc
-Nginx module for openid connect relying party.
-=============================================
+Nginx module for openid connect relying party and JWT authentication
+====================================================================
 
 **nginx-openidc is Nginx module allows openid-connect(JWT) validation and access control based on standard claim as headers. 
 
