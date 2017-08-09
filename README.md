@@ -19,7 +19,7 @@ The request flow - Relying Party ( RP )
    backend **service** application.
 7. The **service** application can use the X-OIDC-* headers as-is.
 
-The request flow - API authorization
+The request flow - API Gateway
 ------------------------------------
 1. ClientApp gets a JWT from authorized OP or generates a JWT using "client-credentials" flow
 2. The clientApp makes a request for a protected API on `ngx-oidc-demo.com` for resource with access_token as "Authorization: Bearer <id_token>" header. 
