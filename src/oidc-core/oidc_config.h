@@ -95,7 +95,7 @@
 		array_header* responseHeaders;		// array of action_header*
 		action_response* response;		
 		char* uri;
-		unsigned int isForward:1,isPermanent:1,isDebug:1, advancedTemplate:1,isForbidden:1;
+		unsigned int isForward:1,isPermanent:1,isDebug:1, advancedTemplate:1,isLoginRedirect:1;
 	}page_action;
 
 	typedef struct pathmapping_action{

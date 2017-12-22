@@ -26,7 +26,7 @@
 		array_header* requestHeaders;		// array of action_header_xml*
 		action_response_xml* response;		// custom response		
 		char* uri;
-		int isDebug:1, isForward:1,isPermanent:1,advancedTemplate:1,isForbidden:1;
+		int isDebug:1, isForward:1,isPermanent:1,advancedTemplate:1,isLoginRedirect:1;
 	}page_action_xml;
 	
 	typedef struct pathmapping_action_xml{

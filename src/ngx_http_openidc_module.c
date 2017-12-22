@@ -1381,6 +1381,10 @@ static int ngx_http_openidc_execPageAction(ngx_http_openidc_request_t *r, page_a
 				destUri = ngx_http_openidc_parseString(r->pool, apr_pstrdup(r->pool, destUri), r);
 			}
 
+			if(paction->isLoginRedirect==TRUE){
+				destUri = apr_pstrcat(r->pool, destUri, "&state=", url_encode2(r->pool, originUri), "&nonce=", apr_table_get(r->headers_in, OIDC_RP_SESSIONID), NULL);
+			}
+
 			if (paction->responseHeaders!=NULL) {
 				ngx_http_openidc_setActionHeaders(r, r->headers_out, paction->responseHeaders, paction->templateEngineRef, originUri, FALSE);
 			}
@@ -1494,7 +1498,7 @@ static const ngx_http_openidc_handler_t ngx_http_oidcHandlers[] = {
 		{oidc_headers}
 };
 
-static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* header, const char* issuer, void* data, char** error) {
+static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* header, const char* audience, void* data, char** error) {
 	oidc_config* oauthConfig = (oidc_config *)data;
 
 	int i;
@@ -1516,8 +1520,8 @@ static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* head
 		jwk->use = apr_pstrdup(p, jwsKey->use);
 		jwk->modulus = apr_pstrdup(p, jwsKey->modulus);
 		jwk->exponent = apr_pstrdup(p, jwsKey->exponent);
-	}else if(issuer!=NULL){
-		relying_party* relyingParty = am_getRelyingPartyByClientID(oauthConfig->relyingPartyHash, issuer);
+	}else if(audience!=NULL){
+		relying_party* relyingParty = am_getRelyingPartyByClientID(oauthConfig->relyingPartyHash, audience);
 		if(relyingParty==NULL) {
 			if(error!=NULL) { *error = apr_pstrdup(p, "relyingParty not configured"); }
 			return NULL;
@@ -1686,10 +1690,17 @@ int ngx_http_openidc_processRequest(ngx_http_openidc_request_t* r, config_core* 
 
 	if(id_token!=NULL) {
 		oauth_jwt* jwt = oauthutil_parseAndValidateIDToken(r->pool, id_token, oauth_getSignatureValidationKey, oauthConfig, &error);
-		if(jwt==NULL||jwt->claim==NULL) {
+		if(jwt==NULL||jwt->claim==NULL||jwt->claim->issuer==NULL||(strcmp(jwt->claim->issuer,oauthConfig->oidcProvider->issuer)!=0)) {
 			ngx_http_openidc_addHeaderWithPrefix(r, headerPrefix, addHeaderToHttpRequest, OIDC_STATUS_HEADER, "failure");
 			ngx_http_openidc_addHeaderWithPrefix(r, headerPrefix, addHeaderToHttpRequest, OIDC_DESC_HEADER, "oidc_parsing_failed");
 			if(error!=NULL) { apr_table_add(r->headers_out, "X-OIDC-ERROR", error); }
+			return NGX_DECLINED;
+		}
+
+		if(jwt->claim->issuer==NULL||oauthConfig->oidcProvider->issuer==NULL||(strcmp(jwt->claim->issuer,oauthConfig->oidcProvider->issuer)!=0)) {
+			ngx_http_openidc_addHeaderWithPrefix(r, headerPrefix, addHeaderToHttpRequest, OIDC_STATUS_HEADER, "failure");
+			ngx_http_openidc_addHeaderWithPrefix(r, headerPrefix, addHeaderToHttpRequest, OIDC_DESC_HEADER, "oidc_issuer_mismatch");
+			apr_table_add(r->headers_out, "X-OIDC-ERROR", "oidc_issuer_mismatch");
 			return NGX_DECLINED;
 		}
 
@@ -2139,6 +2150,7 @@ static void rewrite_pageaction_displayAll(ngx_http_openidc_request_t *r,page_act
 		if(pa->uri!=NULL) { ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>Uri:%s</td></tr>",pa->uri); }
 		ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>isForward: %s</td></tr>",pa->isForward!=1?"false":"true");
 		ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>isPermanent: %s</td></tr>",pa->isPermanent!=1?"false":"true");
+		if(pa->isLoginRedirect){ngx_http_openidc_rprintf(r,"<tr><td>&nbsp;</td><td>isLoginRedirect: true</td></tr>");}
 		if(pa->advancedTemplate==TRUE){
 			ngx_http_openidc_rprintf(r,"<tr><td>&nbsp;</td><td>advancedTemplate: true</td></tr>");
 		}

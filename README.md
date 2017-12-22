@@ -80,7 +80,7 @@ cd nginx-1.8.0/
 NEW-DOCKER-IP ngx-oidc-demo.com
 
 #access docker container via protected path
-http://ngx-oidc-demo.com/protected
+	http://ngx-oidc-demo.com/protected
 
 # Example : headers available on successful JWT validation ( all header is prefixed with HTTP_ when it reaches to backend app )
 ````````````````````
@@ -98,7 +98,7 @@ OPENIDC_HomeDir                        /usr/local/nginx/conf;
 OPENIDC_LogFile                        oidc-refresh.log;
 OPENIDC_SharedMemory  file=/config.shm size=61000;
 OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
-OPENIDC_PassPhrase                     abc123;
+OPENIDC_PassPhrase                     secret123;
 OPENIDC_HeaderPrefix                   X-OIDC-;
 OPENIDC_RefreshWaitSeconds             20;
 OPENIDC_ConfigFile                     oidc-config.xml;
@@ -151,7 +151,7 @@ http {
 	OPENIDC_LogFile                        oidc-refresh.log;
 	OPENIDC_SharedMemory  file=/config.shm size=61000;
 	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;
-	OPENIDC_PassPhrase                     abc123;
+	OPENIDC_PassPhrase                     secret123;
 	OPENIDC_HeaderPrefix                   X-REMOTE-;
 	#OPENIDC_RefreshWaitSeconds				20;
 	OPENIDC_ConfigFile                     oidc-config.xml;
@@ -267,9 +267,9 @@ openid-connect configuration : oidc-conf.xml
     	    <description>describe what action does in few words</description> <!-- string -->
             <isForward>true/false</isForward> <!-- boolean set it to true if its internal redirect, false for 302 redirect, default value true -->
             <isPermanent>true/false</isPermanent> <!-- boolean, set it to true if permanent redirect 301 -->
+            <isLoginRedirect>true/false</isLoginRedirect> <!-- boolean, set it to true if redirect to OP in initial authentication request -->            
             <regex>$$regex-to-generate-tokens-to-build-below-url$$</regex> <!-- string -->
-            <advancedTemplate>true/false</advancedTemplate> <!-- string, set to true of below url is dynamically generated using advanced tokens -->
-            <methods-allowed>$$command separated list of methods allow to proxy$$</methods-allowed> <!-- string -->
+            <advancedTemplate>true/false</advancedTemplate> <!-- string, set to true of below url is dynamically generated using cookie, request headers -->
             <uri>$$target-path1</uri> <!-- string, specify relative url if internal redirect or full path if external redirect 302 -->
     		<requestHeaders> <!-- array of header -->
         		<header name="$$header-name$$" do="add|set|append|merge|unset" matchList="$$match-list-name$$">$$header-value$$</header>
@@ -348,7 +348,7 @@ openid-connect configuration : oidc-conf.xml
 - **description** specifies what action is all about in couple of words
 
 - **isForward**  specifies internal forwared/redirect if set to true
-
+- **isLoginRedirect**  specifies initial authorize request to OP meaning automatically adds state=CURRENT_URI and nonce=CSRF_AND_ID_TOKEN_REPLAY protection in initial request
 - **uri** specifies the target url which can be generated from source url
 - **advancedTemplate** specifies advanced usage to generate target url using various kind of format.
   Target url : <uri>http://hostname:port/myurl/%{format}<format-tag></uri>

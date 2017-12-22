@@ -165,7 +165,7 @@
 		ret->description=NULL;
 		ret->isForward=1;
 		ret->isPermanent=0;
-		ret->isForbidden=0;
+		ret->isLoginRedirect=0;
 		ret->regex=NULL;
 		ret->handler=NULL;
 		ret->isDebug=0;
@@ -255,10 +255,10 @@
 		pa->isPermanent=strcmp(body,"true")==0?1:0;
 		return 1;
 	}
-	static int amx_setPageActionIsForbidden(pool* p,char* xPath,int type,const char *body,void* userdata){
+	static int amx_setPageActionIsLoginRedirect(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
-		pa->isForbidden=strcmp(body,"true")==0?1:0;
+		pa->isLoginRedirect=strcmp(body,"true")==0?1:0;
 		return 1;
 	}	
 	static int amx_setPageActionAdvancedTemplate(pool* p,char* xPath,int type,const char *body,void* userdata){
@@ -276,6 +276,8 @@
 			if(amx!=NULL&&ctmp->tmp!=NULL){
 				pageact=(page_action_xml*)ctmp->tmp;
 				apr_hash_set (amx->page_actions_hash,pageact->id,APR_HASH_KEY_STRING,ctmp->tmp);
+				// loginRedirect means always 302 meaning isForward false
+				if(pageact->isLoginRedirect||pageact->response!=NULL) { pageact->isForward = FALSE; }
 			}
 			ctmp->tmp=NULL;
 			return 1;
@@ -712,7 +714,7 @@
 
 	static action_response_xml* actionmapxml_newPageActionResponseObj(pool* p){
 		action_response_xml* ret=(action_response_xml*)apr_palloc(p,sizeof(action_response_xml));
-		ret->code=-1;
+		ret->code=200;
 		ret->contentType=NULL;
 		ret->body=NULL;
 		return ret;
@@ -1001,7 +1003,7 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/description",0,NULL,amx_setPageActionDescription,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isForward",0,NULL,amx_setPageActionIsForward,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isPermanent",0,NULL,amx_setPageActionIsPermanent,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isForbidden",0,NULL,amx_setPageActionIsForbidden,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isLoginRedirect",0,NULL,amx_setPageActionIsLoginRedirect,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/advancedTemplate",0,NULL,amx_setPageActionAdvancedTemplate,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/uri",0,NULL,amx_setPageActionUri,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/regex",0,NULL,amx_setPageActionRegex,NULL, &tmp);

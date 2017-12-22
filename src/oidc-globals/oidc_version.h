@@ -9,7 +9,7 @@
 
 #define MODULE_COMPONENT_ID "ngx_openidc"
 
-#define MODULE_VERSION_ID "0.0.2"
+#define MODULE_VERSION_ID "0.0.3"
 
 #define VERSION_ID	MODULE_COMPONENT_ID" "MODULE_VERSION_ID
 
@@ -21,6 +21,11 @@
  *
  *
  * Add new version, date, and short description here.
+ * ---------------------------------------------------------------------------------------------------
+ *  0.0.3   -       12/22/2017
+ *
+ *  added new flag isLoginRedirect to directly send to OP login
+ *  Changed by vermat
  * ---------------------------------------------------------------------------------------------------
  *  0.0.2   -       07/22/2017
  *

@@ -39,7 +39,7 @@
 		ret->description=NULL;
 		ret->isForward=0;
 		ret->isPermanent=0;
-		ret->isForbidden=0;
+		ret->isLoginRedirect=0;
 		ret->isDebug=0;
 		ret->templateEngineRef=NULL;
 		ret->advancedTemplate=FALSE;
@@ -152,7 +152,7 @@
 				//transfer details
 				paction->isForward=pax->isForward;
 				paction->isPermanent=pax->isPermanent;
-				paction->isForbidden=pax->isForbidden;
+				paction->isLoginRedirect=pax->isLoginRedirect;
 				paction->advancedTemplate=pax->advancedTemplate;
 				paction->id=shdata_32BitString_copy(sheap,pax->id);
 				paction->description=shdata_32BitString_copy(sheap,pax->description);

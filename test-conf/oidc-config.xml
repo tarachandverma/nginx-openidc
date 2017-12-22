@@ -6,7 +6,7 @@
 	 	<issuer>https://accounts.google.com</issuer>
 	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
 	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
-	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	 		 	
+	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	
 	 </oidcProvider>
 
 	<!-- relying parties configuration -->
@@ -32,17 +32,13 @@
 	    <!-- post auth phase id_token validation actions -->
 		<action id="oidc-login">
 		    <description>oidc login</description>
-		    <isForward>false</isForward>
-		    <regex>(.*)</regex>
-			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r&state=($0U)]]></uri>
+			<isLoginRedirect>true</isLoginRedirect>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback]]></uri>
 		</action>
 		<action id="oidc-login-strip-invalid-token"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
-		    <isForward>false</isForward>
-		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
-		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r&state=($0U)]]></uri>
+		    <isLoginRedirect>true</isLoginRedirect>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback]]></uri>
 		</action>
 		<action id="oidc_show_error">
 		    <description>error returned from idp</description>
