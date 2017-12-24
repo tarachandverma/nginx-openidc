@@ -70,19 +70,19 @@ cd nginx-1.8.0/
 ``````````
      
 # Test ( using docker )
-# build docker image
+#build docker image
 	docker build -t nginx-oidc .
 
 #run docker image	
 	docker run -p 80:80 -p 443:443 -i -t nginx-oidc
 
-# add /etc/hosts entry
-NEW-DOCKER-IP ngx-oidc-demo.com
+#add /etc/hosts entry
+	NEW-DOCKER-IP ngx-oidc-demo.com
 
 #access docker container via protected path
 	http://ngx-oidc-demo.com/protected
-
-# Example : headers available on successful JWT validation ( all header is prefixed with HTTP_ when it reaches to backend app )
+	
+# Example : 
 ````````````````````
 X-OIDC-VALIDATE-STATUS = 	success
 X-OIDC-ISSUER = 	https://accounts.google.com
@@ -90,6 +90,8 @@ X-OIDC-SUBJECT = 	113146716035256978692
 X-OIDC-AUDIENCE = 	282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com
 X-OIDC-NONCE = 	a44df6ae-27f2-4c92-85e1-a22eb6381f53
 X-OIDC-EMAIL = 	xxxx@gmail.com
+
+Note: headers available on successful JWT validation ( all header is prefixed with HTTP_ when it reaches to backend app )
 ````````````````````
 
 # Main Configuration
