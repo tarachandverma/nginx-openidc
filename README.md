@@ -71,16 +71,16 @@ cd nginx-1.8.0/
      
 # Test ( using docker )
 #build docker image
-	docker build -t nginx-oidc .
+- docker build -t nginx-oidc .
 
 #run docker image	
-	docker run -p 80:80 -p 443:443 -i -t nginx-oidc
+- docker run -p 80:80 -p 443:443 -i -t nginx-oidc
 
 #add /etc/hosts entry
-	NEW-DOCKER-IP ngx-oidc-demo.com
+- NEW-DOCKER-IP ngx-oidc-demo.com
 
 #access docker container via protected path
-	http://ngx-oidc-demo.com/protected
+- http://ngx-oidc-demo.com/protected
 	
 # Example : 
 ````````````````````
