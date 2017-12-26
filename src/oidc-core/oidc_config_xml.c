@@ -135,7 +135,7 @@
 			printf("\t* %s",pmx->pathRegex);
 			if(pmx->ignoreCase==TRUE){ printf("\t* ignoreCase=true"); }
 			if(pmx->postAuthActions!=NULL){
-				//printf(", PostAuth:%s",pmx->postAuthAction);
+				//printf(", PostAuth:%s",pmx->oidcAction);
 				amx_printActions(p,"PostAuth", pmx->postAuthActions);
 			}			
 			amx_printPathMappingMatchList(p,pmx->matchLists);
@@ -998,25 +998,25 @@
 		xc_addXPathHandler(xCore,"/oidcConfig",0,amx_oidcConfigAttributes,NULL,NULL, &tmp);
 		
 		//page action stuff
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action",0,amx_newPageAction,NULL,amx_addPageAction, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/id",0,NULL,amx_setPageActionId,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/description",0,NULL,amx_setPageActionDescription,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isForward",0,NULL,amx_setPageActionIsForward,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isPermanent",0,NULL,amx_setPageActionIsPermanent,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/isLoginRedirect",0,NULL,amx_setPageActionIsLoginRedirect,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/advancedTemplate",0,NULL,amx_setPageActionAdvancedTemplate,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/uri",0,NULL,amx_setPageActionUri,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/regex",0,NULL,amx_setPageActionRegex,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/handler",0,NULL,amx_setPageActionHandler,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/requestHeaders/header",0,amx_newActionHeader,amx_setActionRequestHeader,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/responseHeaders/header",0,amx_newActionHeader,amx_setActionResponseHeader,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pageActions/action/response",0,amx_newPageActionResponse,amx_setPageActionResponseBody,amx_addPageActionResponse, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action",0,amx_newPageAction,NULL,amx_addPageAction, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/id",0,NULL,amx_setPageActionId,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/description",0,NULL,amx_setPageActionDescription,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/isForward",0,NULL,amx_setPageActionIsForward,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/isPermanent",0,NULL,amx_setPageActionIsPermanent,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/isLoginRedirect",0,NULL,amx_setPageActionIsLoginRedirect,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/advancedTemplate",0,NULL,amx_setPageActionAdvancedTemplate,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/uri",0,NULL,amx_setPageActionUri,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/regex",0,NULL,amx_setPageActionRegex,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/handler",0,NULL,amx_setPageActionHandler,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/requestHeaders/header",0,amx_newActionHeader,amx_setActionRequestHeader,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/responseHeaders/header",0,amx_newActionHeader,amx_setActionResponseHeader,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/response",0,amx_newPageActionResponse,amx_setPageActionResponseBody,amx_addPageActionResponse, &tmp);
 			
 		//path mapping stuff
-		xc_addXPathHandler(xCore,"/oidcConfig/pathMappings/mapping",0,amx_newPathMapping,NULL,amx_addPathMapping, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pathMappings/mapping/path",0,NULL,amx_setPath,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pathMappings/mapping/postAuthAction",0,amx_newPathMappingAction,amx_setPathMappingAction,amx_addPathMappingPostAuth, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/pathMappings/mapping/matchList",0,NULL,amx_addPathMappingMatchList,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/locations/location",0,amx_newPathMapping,NULL,amx_addPathMapping, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/locations/location/path",0,NULL,amx_setPath,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/locations/location/oidcAction",0,amx_newPathMappingAction,amx_setPathMappingAction,amx_addPathMappingPostAuth, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/locations/location/matchList",0,NULL,amx_addPathMappingMatchList,NULL, &tmp);
 		
 		//match list stuff
 		xc_addXPathHandler(xCore,"/oidcConfig/matchLists/matchList",0,amx_newMatchList,NULL,amx_addMatchList, &tmp);

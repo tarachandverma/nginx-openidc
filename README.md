@@ -254,7 +254,7 @@ openid-connect configuration : oidc-conf.xml
 	 <!-- end of relying parties configuration -->
 	 
  	 <!-- specify collection of actions inside the pageActions -->
-     <pageActions>	<!-- start of page-actions -->
+     <oidcActions>	<!-- start of page-actions -->
  
 		<!-- nginx authz handlers -->
 	    <action id="oidc_version"><handler>oidc_version</handler></action>
@@ -280,7 +280,7 @@ openid-connect configuration : oidc-conf.xml
         		<header name="$$header-name$$" do="add|set|append|merge|unset" matchList="$$match-list-name$$">$$header-value$$</header>
     		</responseheaders>                                 
         </action>                                                     
-    </pageActions><!-- end of page-actions -->
+    </oidcActions><!-- end of page-actions -->
 
     <!-- matchLists are collection of individual matchList -->
     <!-- matchList is collection of individual matches evaluates as match1 OR match2 OR match3 ...  -->
@@ -314,27 +314,27 @@ openid-connect configuration : oidc-conf.xml
         .	.	.
     </matchLists>
 	
-    <!-- pathMappings are collection of individual mappings -->
+    <!-- locations are collection of individual mappings -->
     <!-- mappings is associated to source path and list of actions to choose  -->
-    <pathMappings> <!-- array -->
+    <locations> <!-- array -->
 		<!-- nginx authz handlers to verify oidc information, mainly for debug purpose -->
-	    <mapping path="^/oidc/version"><postAuthAction>oidc_version</postAuthAction></mapping>
-	    <mapping path="^/oidc/config-status"><postAuthAction>oidc_config_core_status</postAuthAction></mapping>
-	    <mapping path="^/oidc/rewrite-pageactions"><postAuthAction>oidc_rewrite_pageactions</postAuthAction></mapping>
-	    <mapping path="^/oidc/rewrite-actionmappings"><postAuthAction>oidc_rewrite_actionmappings</postAuthAction></mapping>
-	    <mapping path="^/oidc/rewrite-match"><postAuthAction>oidc_rewrite_match</postAuthAction></mapping>
-	    <mapping path="^/oidc/headers"><postAuthAction>oidc_headers</postAuthAction></mapping>	    
-	    <mapping path="^/oidc"><postAuthAction>oidc_index</postAuthAction></mapping>
+	    <location path="^/oidc/version"><oidcAction>oidc_version</oidcAction></location>
+	    <location path="^/oidc/config-status"><oidcAction>oidc_config_core_status</oidcAction></location>
+	    <location path="^/oidc/rewrite-pageactions"><oidcAction>oidc_rewrite_pageactions</oidcAction></location>
+	    <location path="^/oidc/rewrite-actionmappings"><oidcAction>oidc_rewrite_actionmappings</oidcAction></location>
+	    <location path="^/oidc/rewrite-match"><oidcAction>oidc_rewrite_match</oidcAction></location>
+	    <location path="^/oidc/headers"><oidcAction>oidc_headers</oidcAction></location>	    
+	    <location path="^/oidc"><oidcAction>oidc_index</oidcAction></location>
 	    <!-- end of nginx authz-->
         
-        <mapping path="$$source-path-regex$$" matchLists="$$comma separated list of matchList$$" ignoreCase="true/false">
-                <postAuthAction matchList=$$matchlist to select this action$$>one of the action in above actions-list-1</postAuthAction>
-                <postAuthAction matchList=$$matchlist to select this action$$>one of the action in above actions-list-2</postAuthAction>
+        <location path="$$source-path-regex$$" matchLists="$$comma separated list of matchList$$" ignoreCase="true/false">
+                <oidcAction matchList=$$matchlist to select this action$$>one of the action in above actions-list-1</oidcAction>
+                <oidcAction matchList=$$matchlist to select this action$$>one of the action in above actions-list-2</oidcAction>
                 .	.	.
-                <postAuthAction>last action, its default action if above action don't match</postAuthAction>
-        </mapping>
+                <oidcAction>last action, its default action if above action don't match</oidcAction>
+        </location>
 		.	.	.                                                                 
-    </pathMappings> <!-- end of pathMappings -->
+    </locations> <!-- end of locations -->
 </oidcConfig>
 
 ```
@@ -342,7 +342,7 @@ openid-connect configuration : oidc-conf.xml
 **mapping** source url 
 - **path**  specifies uri patterns match on source uri
 
-- **postAuthAction** specifies action taken in authorization where it can use all the x-oidc-* headers avaiable in the request
+- **oidcAction** specifies action taken in authorization where it can use all the x-oidc-* headers avaiable in the request
 
 - **matchLists** specifies the condition
 

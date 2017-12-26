@@ -4,8 +4,8 @@ LABEL Vendor="CentOS"
 LABEL License=GPLv2
 LABEL Version=2.4.6-31
 
-RUN	yum -y update
-RUN	yum -y install epel-release
+#RUN	yum -y update
+#RUN	yum -y install epel-release
 
 RUN yum -y install unzip wget tar gcc gcc-c++ git make apr-util-devel curl-devel
 RUN yum -y install libuuid-devel && yum -y install openssl-devel && yum -y install pcre-devel
