@@ -42,14 +42,15 @@ Features
 - Supports rotated RS256 public key.
 - Implements Access phase which validates id_token(JWT) and passes claims as custom headers
 - Implements Post Authorization phase custom response based on custom headers.
-- Allows multiple relying party based on domain
+- Allows multiple relying party based on callback url
+- Allows multiple OpenID-Connect Provider
 - Supports "nonce" generation and validation
 - Supports relying party session
 - Removes custom headers from incoming request to ensure these headers are not spoofed.
 - Unlimited capabilities from Authorization to rewrites
 - Capabilites to add/remove/update request/response headers
 - Capability to generate custom error response
-- Support fo auto refresh entire oidc-config.xml periodically with no server restart
+- Support fo auto refresh entire oidc-config.xml and retrieve RS256 publicKeys from JWKS url periodically with no server restart
 
 Supported platforms
 --------------------------------------
@@ -90,6 +91,10 @@ X-OIDC-SUBJECT = 	113146716035256978692
 X-OIDC-AUDIENCE = 	282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com
 X-OIDC-NONCE = 	a44df6ae-27f2-4c92-85e1-a22eb6381f53
 X-OIDC-EMAIL = 	xxxx@gmail.com
+
+X-REQUEST-METHOD = 	GET
+X-REQUEST-SCHEME = 	http
+X-RP-SESSION = 	7a6db077-ea64-47b4-ae77-2f438f4803ba
 
 Note: headers available on successful JWT validation ( all header is prefixed with HTTP_ when it reaches to backend app )
 ````````````````````
@@ -178,11 +183,11 @@ openid-connect configuration : oidc-conf.xml
 ```XML
 <?xml version="1.0"?>
 <oidcConfig>
+   <oidcProviders>
 	<!-- OpenID-Connect Provider metadata url -->	 
-	 <oidcProvider>
+	 <oidcProvider issuer="$$OP issuer$$">
 	 	<metadataUrl>$$OP metadata url$$</metadataUrl>
 		<!--you can set individua params as well if metadata is not available -->
-	 	<issuer>$$OP issuer$$</issuer>
 	 	<authorizationEndpoint>$$OP authorization_end_point$$</authorizationEndpoint>
 	 	<tokenEndpoint>$$OP token_end_point same as defined in nginx.conf's proxy_pass for token endpoint$$</tokenEndpoint>
 	 	<jwksUri>$$OP json web keys end poing$$</jwksUri><!-- json web keys url exposed by OP, useful if keys are rotated by OP -->
@@ -234,21 +239,25 @@ openid-connect configuration : oidc-conf.xml
  ]
 }]]></jwksJson-->	 	
 	 </oidcProvider>
+   </oidcProviders>
 
 	<!-- relying parties configuration, you can configure multiple relying parties, default must be configured and usually same as first one in case there is only one -->
 	 <relyingParties default="$$YOUR CLIENT ID for APP1 $$"><!-- default is mendatory and is same as first one  -->
-	 	<relyingParty clientID="$$YOUR CLIENT ID for app1$$" clientSecret="$$YOUR CLIENT SECRET for app1$$" domain=""$$YOUR APPLICATION DOMAIN$$"" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 	<relyingParty clientID="$$YOUR CLIENT ID for app1$$" clientSecret="$$YOUR CLIENT SECRET for app1$$" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
+	 		<issuer>$$OIDC ISSUER FROM ABOVE LIST TO SELECT APPROPRIATE TOKEN EXCHANGE END-POINT FOR ID_TOKEN$$</issuer>	 		
 	 	</relyingParty>
-	 	<relyingParty clientID="$$YOUR CLIENT ID for app2 $$" clientSecret="$$YOUR CLIENT SECRET for app2$$" domain=""$$YOUR APPLICATION DOMAIN$$"" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 	<relyingParty clientID="$$YOUR CLIENT ID for app2 $$" clientSecret="$$YOUR CLIENT SECRET for app2$$" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
+	 		<issuer>$$OIDC ISSUER FROM ABOVE LIST TO SELECT APPROPRIATE TOKEN EXCHANGE END-POINT FOR ID_TOKEN$$</issuer>	 		
 	 	</relyingParty>
 	 	...
-	 	<relyingParty clientID="$$YOUR CLIENT ID for appn $$" clientSecret="$$YOUR CLIENT SECRET for appn$$" domain=""$$YOUR APPLICATION DOMAIN$$"" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 	<relyingParty clientID="$$YOUR CLIENT ID for appn $$" clientSecret="$$YOUR CLIENT SECRET for appn$$" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
+	 		<issuer>$$OIDC ISSUER FROM ABOVE LIST TO SELECT APPROPRIATE TOKEN EXCHANGE END-POINT FOR ID_TOKEN$$</issuer>	 		
 	 	</relyingParty>	 		 	
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->

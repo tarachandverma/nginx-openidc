@@ -45,7 +45,7 @@
 		char* description;
 		char *clientID;
 		char* clientSecret;
-		char* domain;
+		char* issuer;
 		int 	validateNonce;
 		char* redirectUri;
 	}relying_party_xml;
@@ -57,6 +57,7 @@
 		char* tokenEndpoint;
 		char* jwksUri;
 		char* jwksJson;
+		int isDefault;
 	}oidc_provider_xml;
 
 	typedef struct oidc_config_xml{
@@ -67,8 +68,7 @@
 		Cookie*				rpSession;
 		Cookie*				oidcSession;
 		apr_hash_t* relyingPartyHash;
-		char* defaultRelyingParty;
-		oidc_provider_xml* oidcProvider;
+		apr_hash_t* oidcProviderHash;
 	}oidc_config_xml;
 	
 	oidc_config_xml* amx_newObj(pool* p);

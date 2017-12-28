@@ -1,23 +1,29 @@
 <?xml version="1.0"?>
 <oidcConfig>
-	<!-- OpenID-Connect Provider metadata url -->	 
-	 <oidcProvider>
-	 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
-	 	<issuer>https://accounts.google.com</issuer>
-	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
-	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
-	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	
-	 </oidcProvider>
-
-	<!-- relying parties configuration -->
-	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" domain=".com" validateNonce="true">
+	<!-- OpenID-Connect Provider metadata url -->
+	 <oidcProviders>	
+	 	<!-- first one is default if default is not set with isDefault=true attribute --> 
+		 <oidcProvider issuer="https://accounts.google.com" >
+		 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
+		 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
+		 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
+		 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	
+		 </oidcProvider>
+	 </oidcProviders>
+	 
+	<!-- relying parties configuration for callback handling -->
+	 <relyingParties>
+	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" validateNonce="true">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
+	 		<issuer>https://accounts.google.com</issuer> 		
 	 	</relyingParty>
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
+	 <rpSession name="rp_session" lifetime="30"  httpOnly="true" />
+ 	 <oidcSession name="oidc_session" lifetime="2"  httpOnly="true" />
+	 	 
      <oidcActions>
  
 		<!-- nginx oidc internal verification handlers for what's configuration params are loaded in memory -->
@@ -113,9 +119,7 @@
 	    <location path="^/oauth2/callback\?(.*)error=">
 			<oidcAction>oidc_show_error</oidcAction>			
 	    </location>
-	    <location path="^/oauth2/callback\?(.*)state=">
-			<oidcAction>goto-resource</oidcAction>			
-	    </location>   
+   
         <!-- end of callback rules -->
         
         <!-- APIs authorizatioin -->        

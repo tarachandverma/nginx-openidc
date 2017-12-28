@@ -118,7 +118,7 @@
 		char* description;
 		char *clientID;
 		char* clientSecret;
-		char* domain;
+		char* issuer;
 		int	validateNonce;
 		char* redirectUri;
 	}relying_party;
@@ -130,6 +130,7 @@
 		char* tokenEndpoint;
 		char* jwksUri;
 		shapr_hash_t* jwsKeys;
+		int isDefault;
 	}oidc_provider;
 
 	typedef struct oidc_config{
@@ -140,7 +141,7 @@
 		Cookie*	 rpSession;
 		Cookie*	 oidcSession;
 		shapr_hash_t* relyingPartyHash;
-		relying_party* defaultRelyingParty;
+		shapr_hash_t* oidcProviderHash;
 		oidc_provider* oidcProvider;
 	}oidc_config;
 	
@@ -153,7 +154,8 @@
 	void am_printAll(pool* p, oidc_config* oidcConfig);
 	oauth_jwskey* am_getJWSKeyByKeyID(shapr_hash_t* keyHash, char* keyID);
 	relying_party* am_getRelyingPartyByClientID(shapr_hash_t* relyingPartyHash, const char* clientID);
-	relying_party* am_getRelyingPartyByHost(pool*p, shapr_hash_t* relyingPartyHash, const char* domain);
+	relying_party* am_getRelyingPartyByRedirectUri(pool*p, shapr_hash_t* relyingPartyHash, const char* currentRedirectUri);
+	oidc_provider* am_getOidcProviderByIssuer(shapr_hash_t* oidcProviderHash, const char* issuer);
 
 	typedef struct oauth_jwt_header {
 		char* algorithm;
@@ -208,7 +210,7 @@
 	//ID Token ( JWT format)
 	oauth_jwk* oauthutil_newJWKObj(pool *p);
 	const char* oauthutil_generateIDToken(pool* p, oauth_jwt_header* header, oauth_jwt_claim*  claim, const char* secretKey) ;
-	typedef oauth_jwk* (*getJSONWebKey_func)(pool*p, oauth_jwt_header* header, const char* audience, void* data, char** error);
+	typedef oauth_jwk* (*getJSONWebKey_func)(pool*p, oauth_jwt_header* header, const char* issuer, const char* audience, void* data, char** error);
 	oauth_jwt* oauthutil_parseIDToken(pool* p, const char* src, char** payloadP, char** error);
 	oauth_jwt* oauthutil_parseAndValidateIDToken(pool* p, const char* src, getJSONWebKey_func getJSONWebKeyFunc, void* data, char** error);
 	void oauthutil_printIDToken(pool* p, oauth_jwt* IDToken);

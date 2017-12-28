@@ -26,7 +26,8 @@
 		ret->match_lists=shapr_hash_make(sheap);
 		ret->templateEngine=NULL;
 		ret->relyingPartyHash=shapr_hash_make(sheap);
-		ret->defaultRelyingParty=NULL;
+		ret->oidcProviderHash=shapr_hash_make(sheap);
+		ret->oidcProvider=NULL;
 		return ret;		
 	}
 	
@@ -325,7 +326,7 @@
 		ret->clientID=NULL;
 		ret->clientSecret=NULL;
 		ret->description=NULL;
-		ret->domain=NULL;
+		ret->issuer=NULL;
 		ret->redirectUri=NULL;
 		return ret;
 	}
@@ -347,7 +348,7 @@
 				rp->clientID=shdata_32BitString_copy(sheap,rpX->clientID);
 				rp->description=shdata_32BitString_copy(sheap,rpX->description);
 				rp->clientSecret=shdata_32BitString_copy(sheap,rpX->clientSecret);
-				rp->domain=shdata_32BitString_copy(sheap,rpX->domain);
+				rp->issuer=shdata_32BitString_copy(sheap,rpX->issuer);
 				rp->validateNonce = rpX->validateNonce;
 				rp->redirectUri=shdata_32BitString_copy(sheap,rpX->redirectUri);
 				shapr_hash_set(sheap,hash,rp->clientID,APR_HASH_KEY_STRING,rp);
@@ -417,6 +418,7 @@
 		char* homeDir=globals->homeDir;
 		cbs_service_descriptor *rs=globals->resourceService;
 		char* error=NULL;
+		apr_hash_index_t * hi=NULL;
 		
 		//do on subpool
 		if((status=apr_pool_create(&subp,p))!=APR_SUCCESS){
@@ -454,117 +456,139 @@
 			}
 		}
 
-		if(axml->oidcProvider==NULL) {
+		if(axml->oidcProviderHash==NULL) {
 			return apr_pstrdup(p,"oidcProvider is NULL");
 		}
 
-		// download oidcProvider url and read it.
-		ret->oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
-		char* jwksJson = NULL;
-		if(axml->oidcProvider->metadataUrl!=NULL) {
-			ret->oidcProvider->metadataUrl=shdata_32BitString_copy(sheap,axml->oidcProvider->metadataUrl);
-			char* metadata = oauthconf_downloadOIDCProviderMetadata(p, sheap, homeDir, axml->oidcProvider->metadataUrl);
-			Value* json = 	JSON_Parse(p, metadata);
-			if(json==NULL) return NULL;
+		// set default to NULL
+		ret->oidcProvider = NULL;
 
-			Value* item = JSON_GetObjectItem(json, "issuer");
-			char* issuer = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-			ret->oidcProvider->issuer=shdata_32BitString_copy(sheap,issuer);
+		// iterate thru all the providers
+		for (hi = apr_hash_first(p,axml->oidcProviderHash); hi; hi = apr_hash_next(hi)) {
+			void *val=NULL;
+			apr_hash_this(hi, NULL, NULL, &val);
+			if(val!=NULL){
+				oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)val;
+				oidc_provider* oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
 
-			item = JSON_GetObjectItem(json, "authorization_endpoint");
-			char* authorizationEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-			ret->oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,authorizationEndpoint);
+				// copy one by one
+				// download oidcProvider url and read it.
+				oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
+				oidcProvider->isDefault = oidcProviderX->isDefault;
+				char* jwksJson = NULL;
+				if(oidcProviderX->metadataUrl!=NULL) {
+					oidcProvider->metadataUrl=shdata_32BitString_copy(sheap,oidcProviderX->metadataUrl);
+					char* metadata = oauthconf_downloadOIDCProviderMetadata(p, sheap, homeDir, oidcProviderX->metadataUrl);
+					Value* json = 	JSON_Parse(p, metadata);
+					if(json==NULL) return NULL;
 
-			item = JSON_GetObjectItem(json, "token_endpoint");
-			char* tokenEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-			ret->oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,tokenEndpoint);
+					Value* item = JSON_GetObjectItem(json, "issuer");
+					char* issuer = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+					oidcProvider->issuer=shdata_32BitString_copy(sheap,issuer);
 
-			item = JSON_GetObjectItem(json, "jwks_uri");
-			char* jwksUri = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
-			ret->oidcProvider->jwksUri=shdata_32BitString_copy(sheap,jwksUri);
+					item = JSON_GetObjectItem(json, "authorization_endpoint");
+					char* authorizationEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+					oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,authorizationEndpoint);
 
-			// download JWT verification keys from url
-			if(ret->oidcProvider->jwksUri!=NULL) {
-				http_util_result* httpResult=hc_get_verbose(p, ret->oidcProvider->jwksUri, 10, NULL, NULL, error);
-				if(!hc_is200_OK(httpResult)) {
-					if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response and cache file both failed"); }
-					apr_pool_destroy (subp);
-					return NULL;
+					item = JSON_GetObjectItem(json, "token_endpoint");
+					char* tokenEndpoint = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+					oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,tokenEndpoint);
+
+					item = JSON_GetObjectItem(json, "jwks_uri");
+					char* jwksUri = (item!=NULL) ? (char*)JSON_GetStringFromStringItem(item) : NULL;
+					oidcProvider->jwksUri=shdata_32BitString_copy(sheap,jwksUri);
+
+					// download JWT verification keys from url
+					if(oidcProvider->jwksUri!=NULL) {
+						http_util_result* httpResult=hc_get_verbose(p, oidcProvider->jwksUri, 10, NULL, NULL, error);
+						if(!hc_is200_OK(httpResult)) {
+							if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response and cache file both failed"); }
+							apr_pool_destroy (subp);
+							return NULL;
+						}
+						jwksJson = httpResult->data;
+					}
+				} else {
+					oidcProvider->issuer=shdata_32BitString_copy(sheap, oidcProviderX->issuer);
+					oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,oidcProviderX->authorizationEndpoint);
+					oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,oidcProviderX->tokenEndpoint);
+					oidcProvider->jwksUri=shdata_32BitString_copy(sheap,oidcProviderX->jwksUri);
+					// download JWT verification keys from url
+					if(oidcProvider->jwksUri!=NULL) {
+
+						http_util_result* httpResult=hc_get_verbose(p, oidcProvider->jwksUri, 10, NULL, NULL, error);
+						if(!hc_is200_OK(httpResult)) {
+							if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response and cache file both failed"); }
+							apr_pool_destroy (subp);
+							return NULL;
+						}
+						jwksJson = httpResult->data;
+					} else {
+						jwksJson = shdata_32BitString_copy(sheap,oidcProviderX->jwksJson);
+					}
 				}
-				jwksJson = httpResult->data;
-			}
-		} else {
-			ret->oidcProvider->issuer=shdata_32BitString_copy(sheap, axml->oidcProvider->issuer);
-			ret->oidcProvider->authorizationEndpoint=shdata_32BitString_copy(sheap,axml->oidcProvider->authorizationEndpoint);
-			ret->oidcProvider->tokenEndpoint=shdata_32BitString_copy(sheap,axml->oidcProvider->tokenEndpoint);
-			ret->oidcProvider->jwksUri=shdata_32BitString_copy(sheap,axml->oidcProvider->jwksUri);
-			// download JWT verification keys from url
-			if(ret->oidcProvider->jwksUri!=NULL) {
 
-				http_util_result* httpResult=hc_get_verbose(p, ret->oidcProvider->jwksUri, 10, NULL, NULL, error);
-				if(!hc_is200_OK(httpResult)) {
-					if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response and cache file both failed"); }
-					apr_pool_destroy (subp);
-					return NULL;
+				if(jwksJson!=NULL) {
+					Value* json = 	JSON_Parse(p, jwksJson);
+					if(json==NULL) {
+						if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response parsing failed"); }
+						apr_pool_destroy (subp);
+						return NULL;
+					}
+
+					Value* array = JSON_GetObjectItem(json, "keys");
+					if(array==NULL||JSON_GetItemType(array)!=JSON_Array) {
+						if(error!=NULL) { *error = apr_pstrdup(p, "keys object is not array"); }
+						apr_pool_destroy (subp);
+						return NULL;
+					}
+
+					int	arrSz = JSON_GetArraySize(array);
+					oidcProvider->jwsKeys=shapr_hash_make(sheap);
+
+					// Retrieve item number "item" from array "array". Returns NULL if unsuccessful.
+					for (i=0; i<arrSz; i++) {
+
+						oauth_jwskey* jwsKey=(oauth_jwskey*)shdata_shpcalloc(sheap,sizeof(oauth_jwskey));
+
+						Value* element = JSON_GetArrayItem(array, i);
+						Value* keyIDObj = JSON_GetObjectItem(element, "kid");
+						const char* keyID = (keyIDObj) ? JSON_GetStringFromStringItem(keyIDObj) : NULL;
+						jwsKey->id = shdata_32BitString_copy(sheap,keyID);
+
+						Value* val = JSON_GetObjectItem(element, "kty");
+						char* type = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+						jwsKey->type=shdata_32BitString_copy(sheap,type);
+
+						val = JSON_GetObjectItem(element, "alg");
+						char* algorithm = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+						jwsKey->algorithm=shdata_32BitString_copy(sheap, algorithm);
+
+						val = JSON_GetObjectItem(element, "use");
+						char* use = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+						jwsKey->use=shdata_32BitString_copy(sheap, use);
+
+						val = JSON_GetObjectItem(element, "n");
+						char* modulus = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+						jwsKey->modulus=shdata_32BitString_copy(sheap, modulus);
+
+						val = JSON_GetObjectItem(element, "e");
+						char* exponent = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
+						jwsKey->exponent=shdata_32BitString_copy(sheap, exponent);
+
+						shapr_hash_set(sheap,oidcProvider->jwsKeys,jwsKey->id,APR_HASH_KEY_STRING,jwsKey);
+
+					}
+
 				}
-				jwksJson = httpResult->data;
-			} else {
-				jwksJson = shdata_32BitString_copy(sheap,axml->oidcProvider->jwksJson);
+
+				shapr_hash_set(sheap,ret->oidcProviderHash,oidcProvider->issuer,APR_HASH_KEY_STRING,oidcProvider);
+				if(ret->oidcProvider==NULL) { // set the first valid one
+					ret->oidcProvider = oidcProvider;
+				}else if(oidcProvider->isDefault) { // override from default
+					ret->oidcProvider = oidcProvider;
+				}
 			}
-		}
-
-		if(jwksJson!=NULL) {
-			Value* json = 	JSON_Parse(p, jwksJson);
-			if(json==NULL) {
-				if(error!=NULL) { *error = apr_pstrdup(p, "jwsUri response parsing failed"); }
-				apr_pool_destroy (subp);
-				return NULL;
-			}
-
-			Value* array = JSON_GetObjectItem(json, "keys");
-			if(array==NULL||JSON_GetItemType(array)!=JSON_Array) {
-				if(error!=NULL) { *error = apr_pstrdup(p, "keys object is not array"); }
-				apr_pool_destroy (subp);
-				return NULL;
-			}
-
-			int	arrSz = JSON_GetArraySize(array);
-			ret->oidcProvider->jwsKeys=shapr_hash_make(sheap);
-
-			// Retrieve item number "item" from array "array". Returns NULL if unsuccessful.
-			for (i=0; i<arrSz; i++) {
-
-				oauth_jwskey* jwsKey=(oauth_jwskey*)shdata_shpcalloc(sheap,sizeof(oauth_jwskey));
-
-				Value* element = JSON_GetArrayItem(array, i);
-				Value* keyIDObj = JSON_GetObjectItem(element, "kid");
-				const char* keyID = (keyIDObj) ? JSON_GetStringFromStringItem(keyIDObj) : NULL;
-				jwsKey->id = shdata_32BitString_copy(sheap,keyID);
-
-				Value* val = JSON_GetObjectItem(element, "kty");
-				char* type = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-				jwsKey->type=shdata_32BitString_copy(sheap,type);
-
-				val = JSON_GetObjectItem(element, "alg");
-				char* algorithm = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-				jwsKey->algorithm=shdata_32BitString_copy(sheap, algorithm);
-
-				val = JSON_GetObjectItem(element, "use");
-				char* use = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-				jwsKey->use=shdata_32BitString_copy(sheap, use);
-
-				val = JSON_GetObjectItem(element, "n");
-				char* modulus = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-				jwsKey->modulus=shdata_32BitString_copy(sheap, modulus);
-
-				val = JSON_GetObjectItem(element, "e");
-				char* exponent = (val) ? (char*)JSON_GetStringFromStringItem(val) : NULL;
-				jwsKey->exponent=shdata_32BitString_copy(sheap, exponent);
-
-				shapr_hash_set(sheap,ret->oidcProvider->jwsKeys,jwsKey->id,APR_HASH_KEY_STRING,jwsKey);
-
-			}
-
 		}
 
 		ret->rpSession=
@@ -573,9 +597,6 @@
 			cookie_cookieShmDup(sheap,axml->oidcSession);
 
 		am_copyRelyingsParties(p, sheap, axml->relyingPartyHash,ret->relyingPartyHash);
-		if(axml->defaultRelyingParty!=NULL&&ret->relyingPartyHash!=NULL) {
-			ret->defaultRelyingParty = (relying_party*)shapr_hash_get(ret->relyingPartyHash, axml->defaultRelyingParty, APR_HASH_KEY_STRING);
-		}
 
 		shdata_CloseItemTagWithInfo(sheap,"Action Mappings");
 		apr_pool_destroy(subp);
@@ -1218,7 +1239,7 @@ oauth_jwt* oauthutil_parseAndValidateIDToken(pool* p, const char* src, getJSONWe
 		return NULL;
 	}
 
-	oauth_jwk* jwk = (*getJSONWebKeyFunc)(p, jwt->header, jwt->claim->audience, data, error);
+	oauth_jwk* jwk = (*getJSONWebKeyFunc)(p, jwt->header, jwt->claim->issuer, jwt->claim->audience, data, error);
 	if(jwk==NULL) return NULL;
 
 	int verified=FALSE;
@@ -1414,32 +1435,31 @@ relying_party* am_getRelyingPartyByClientID(shapr_hash_t* relyingPartyHash, cons
 	return (relying_party*)shapr_hash_get(relyingPartyHash, clientID, APR_HASH_KEY_STRING);
 }
 
-
-static const char* am_strstr_backward (const char * haystack, const char * needle, size_t needle_len) {
-	const char* pos = strstr(haystack, needle);
-
-	// ensure that  needle is at the end of the haystack.
-	if(pos==NULL||*(pos+needle_len)!='\0') return NULL;
-
-	return pos;
-}
-
-relying_party* am_getRelyingPartyByHost(pool*p, shapr_hash_t* relyingPartyHash, const char* host) {
+relying_party* am_getRelyingPartyByRedirectUri(pool*p, shapr_hash_t* relyingPartyHash, const char* currentRedirectUri) {
 	shapr_hash_index_t * hi=NULL;
 	void *val=NULL;
 	const void *key=NULL;
 
-	if (relyingPartyHash==NULL || host==NULL) return NULL;
+	if (relyingPartyHash==NULL || currentRedirectUri==NULL) return NULL;
 
+	relying_party* defaultRelyingParty=NULL;
 	for(hi = shapr_hash_first(p, relyingPartyHash); hi; hi = shapr_hash_next(hi)){
 		shapr_hash_this(hi, &key, NULL, &val);
-		relying_party* relyingRarty=(relying_party*)val;
-		if(relyingRarty!=NULL&&relyingRarty->domain!=NULL) {
-			if(am_strstr_backward(host, relyingRarty->domain, strlen(relyingRarty->domain))!=NULL) {
-				return relyingRarty;
+		relying_party* relyingParty=(relying_party*)val;
+		if(defaultRelyingParty==NULL) { defaultRelyingParty = relyingParty ; } // save the first one
+		if(relyingParty!=NULL&&relyingParty->redirectUri!=NULL) {
+			if(strstr(currentRedirectUri, relyingParty->redirectUri)!=0) {
+				return relyingParty;
 			}
 		}
 	}
 
-	return NULL;
+	return defaultRelyingParty;
+}
+
+oidc_provider* am_getOidcProviderByIssuer(shapr_hash_t* oidcProviderHash, const char* issuer) {
+
+	if (oidcProviderHash==NULL || issuer==NULL) return NULL;
+
+	return (oidc_provider*)shapr_hash_get(oidcProviderHash, issuer, APR_HASH_KEY_STRING);
 }

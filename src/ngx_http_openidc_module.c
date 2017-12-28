@@ -1498,7 +1498,7 @@ static const ngx_http_openidc_handler_t ngx_http_oidcHandlers[] = {
 		{oidc_headers}
 };
 
-static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* header, const char* audience, void* data, char** error) {
+static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* header, const char* issuer, const char* audience, void* data, char** error) {
 	oidc_config* oauthConfig = (oidc_config *)data;
 
 	int i;
@@ -1510,8 +1510,13 @@ static oauth_jwk* oauth_getSignatureValidationKey(pool*p, oauth_jwt_header* head
 	oauth_jwk* jwk =oauthutil_newJWKObj(p);
 
 	if(header->keyID!=NULL) {
-		oauth_jwskey* jwsKey = am_getJWSKeyByKeyID(oauthConfig->oidcProvider->jwsKeys, header->keyID);
+		oidc_provider* oidcProvider = am_getOidcProviderByIssuer(oauthConfig->oidcProviderHash, issuer);
+		if(oidcProvider==NULL) {
+			if(error!=NULL) { *error = apr_pstrdup(p, "issuer is not configured"); }
+			return NULL;
+		}
 
+		oauth_jwskey* jwsKey = am_getJWSKeyByKeyID(oidcProvider->jwsKeys, header->keyID);
 		if(jwsKey==NULL) {
 			if(error!=NULL) { *error = apr_pstrdup(p, "jwsKey by keyID not found"); }
 			return NULL;
@@ -1934,6 +1939,13 @@ static ngx_int_t ngx_http_openidc_checkForAccess(ngx_http_request_t *httpRequest
 			}
 		}
 	}else{
+		// send to target url if found in state
+		uri_components *url = &r->parsed_uri;
+		char* state = url_getParam(r->pool, url->query, "state");
+		if(state!=NULL) {
+			retCode = ngx_http_openidc_execUri(r, state, FALSE, FALSE, NULL);
+		}
+
 		apr_table_do(ngx_http_openidc_addResponseHeaderCallback, httpRequest, r->headers_out, NULL);
 	}
 	
@@ -2041,7 +2053,7 @@ int oidc_index(ngx_http_openidc_request_t *r, Config* config) {
 	ngx_http_openidc_rputs("<td valign='top'><table><tr><td><b><font color='green'>Handlers</font></b></td></tr>",r);
 	ngx_http_openidc_rputs("<TR><TD><a href='/oidc/version'>Version Details</a></TD></TR>",r);
     ngx_http_openidc_rputs("<TR><TD><a href='/oidc/config-status'>ConfigCore Details</a></TD></TR>",r);
-	ngx_http_openidc_rputs("<TR><TD><a href='/oidc/rewrite-pageactions'>PostAuth Actions Details</a></TD></TR>",r);
+	ngx_http_openidc_rputs("<TR><TD><a href='/oidc/rewrite-pageactions'>OIDC Actions Details</a></TD></TR>",r);
 	ngx_http_openidc_rputs("<TR><TD><a href='/oidc/rewrite-actionmappings'>OIDC Config Details</a></TD></TR>",r);
     ngx_http_openidc_rputs("<TR><TD><a href='/oidc/headers'>Show Headers</a></TD></TR>",r);
 	ngx_http_openidc_rputs("</table>",r);
@@ -2475,6 +2487,71 @@ static void authzoidc_displayTemplateEngine(ngx_http_openidc_request_t *r,templa
 	ngx_http_openidc_rputs("<TABLE>",r);
 }
 
+static void authzoidc_displayOidcProviders(ngx_http_openidc_request_t *r, shapr_hash_t* oidcProviderHash){
+	match_list* list=NULL;
+	shapr_hash_index_t * hi=NULL;
+	oidc_provider* oidcProvider=NULL;
+	int i=0;
+	void* val=NULL;
+	unsigned int cnt=0;
+
+	if(oidcProviderHash==NULL) return NULL;
+
+	ngx_http_openidc_rputs("<TABLE>",r);
+	cnt=shapr_hash_count(oidcProviderHash);
+	ngx_http_openidc_rprintf1(r,"<tr><td colspan='4'><font color='maroon'><strong>OIDCProviders [%d]:</strong></font></td></tr>",cnt);
+	if(cnt>0){
+		for (hi = shapr_hash_first(r->pool,oidcProviderHash); hi; hi = shapr_hash_next(hi)) {
+		   shapr_hash_this(hi, NULL, NULL, &val);
+		   if(val!=NULL){
+			  oidcProvider=(oidc_provider*)val;
+				if(oidcProvider!=NULL) {
+					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>Issuer</strong></font><td>%s</td></td></tr>", oidcProvider->issuer);
+					ngx_http_openidc_rprintf1(r,"<tr><td>MetadataUrl</td><td>%s</td></tr>",oidcProvider->metadataUrl);
+					ngx_http_openidc_rprintf1(r,"<tr><td>AuthorizationEndpoint</td><td>%s</td></tr>",oidcProvider->authorizationEndpoint);
+					ngx_http_openidc_rprintf1(r,"<tr><td>JwksUri</td><td>%s</td></tr>",oidcProvider->jwksUri);
+					ngx_http_openidc_rprintf1(r,"<tr><td>Default</td><td>%s</td></tr>",BOOLTOSTR(oidcProvider->isDefault));
+				}
+			  ngx_http_openidc_rputs("</td></tr>",r);
+		   }
+		}
+	}
+	ngx_http_openidc_rputs("</TABLE>",r);
+}
+
+static void authzoidc_displayRelyingParties(ngx_http_openidc_request_t *r, shapr_hash_t* relyingPartyHash){
+	match_list* list=NULL;
+	shapr_hash_index_t * hi=NULL;
+	relying_party* relyingParty=NULL;
+	int i=0;
+	void* val=NULL;
+	unsigned int cnt=0;
+
+	if(relyingPartyHash==NULL) return NULL;
+
+	ngx_http_openidc_rputs("<TABLE>",r);
+	cnt=shapr_hash_count(relyingPartyHash);
+	ngx_http_openidc_rprintf1(r,"<tr><td colspan='4'><font color='maroon'><strong>RelyingParties [%d]:</strong></font></td></tr>",cnt);
+	if(cnt>0){
+		for (hi = shapr_hash_first(r->pool,relyingPartyHash); hi; hi = shapr_hash_next(hi)) {
+		   shapr_hash_this(hi, NULL, NULL, &val);
+		   if(val!=NULL){
+			   relyingParty=(relying_party*)val;
+				if(relyingParty!=NULL) {
+					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>ClientID</strong></font><td>%s</td></td></tr>", relyingParty->clientID);
+					ngx_http_openidc_rprintf1(r,"<tr><td>Description</td><td>%s</td></tr>",relyingParty->description);
+					ngx_http_openidc_rprintf1(r,"<tr><td>ClientSecret</td><td>%s</td></tr>",relyingParty->clientSecret);
+					ngx_http_openidc_rprintf1(r,"<tr><td>RedirectUri</td><td>%s</td></tr>",relyingParty->redirectUri);
+					ngx_http_openidc_rprintf1(r,"<tr><td>Issuer</td><td>%s</td></tr>",relyingParty->issuer);
+					ngx_http_openidc_rprintf1(r,"<tr><td>ValidateNonce</td><td>%s</td></tr>",BOOLTOSTR(relyingParty->validateNonce));
+				}
+			  ngx_http_openidc_rputs("</td></tr>",r);
+		   }
+		}
+	}
+	ngx_http_openidc_rputs("</TABLE>",r);
+}
+
   int oidc_rewrite_actionmappings(ngx_http_openidc_request_t *r, Config *config) {
 
 	  if (strcmp(r->handler, "oidc_rewrite_actionmappings")) {
@@ -2498,13 +2575,8 @@ static void authzoidc_displayTemplateEngine(ngx_http_openidc_request_t *r,templa
 	ngx_http_openidc_rprintf(r,"<HEAD><TITLE>OIDC Config</TITLE></HEAD>\n");
 	ngx_http_openidc_rputs("<BODY>\n",r);
 
-	if(actm->oidcProvider!=NULL) {
-		ngx_http_openidc_rprintf(r,"<TABLE><tr><td><font color='black'><strong>OIDCProvider</strong></font></td></tr>");
-		ngx_http_openidc_rprintf1(r,"<tr><td>MetadataUrl</td><td>%s</td></tr>",actm->oidcProvider->metadataUrl);
-		ngx_http_openidc_rprintf1(r,"<tr><td>Issuer</td><td>%s</td></tr>",actm->oidcProvider->issuer);
-		ngx_http_openidc_rprintf1(r,"<tr><td>AuthorizationEndpoint</td><td>%s</td></tr>",actm->oidcProvider->authorizationEndpoint);
-		ngx_http_openidc_rprintf1(r,"<tr><td>JwksUri</td><td>%s</td></tr></TABLE>",actm->oidcProvider->jwksUri);
-	}
+	authzoidc_displayOidcProviders(r, actm->oidcProviderHash);
+	authzoidc_displayRelyingParties(r, actm->relyingPartyHash);
 
 	ngx_http_openidc_rprintf(r,"<TABLE><tr><td><font color='black'><strong>Session</strong></font></td></tr>");
 	ngx_http_openidc_rprintf2(r,"<tr><td>RelyingParty</td><td>name=%s</td><td>expiry(days)=%d</td></tr>",actm->rpSession->name, actm->rpSession->age);
@@ -2919,10 +2991,9 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
 
     }else if(url_get_param(url->query, (char*)"code", tmp, OAUTH_IDTOKEN_MAX_SIZE)>0){
 		char* authorizationCode = apr_pstrdup(r->pool, tmp);
-		relying_party* relyingParty = am_getRelyingPartyByHost(r->pool, oidcConfig->relyingPartyHash, r->hostname);
-		if(relyingParty==NULL) {
-			relyingParty = oidcConfig->defaultRelyingParty;
-		}
+		char* currentRedirectUri = ngx_http_openidc_getFullRequestUrl(r);
+		//printf("%s:%d CurrentRedirectUri=[%s]\n", __FILE__, __LINE__, currentRedirectUri);
+		relying_party* relyingParty = am_getRelyingPartyByRedirectUri(r->pool, oidcConfig->relyingPartyHash, currentRedirectUri);
 		if(relyingParty!=NULL) {
 			char* requestBody = apr_pstrcat(r->pool,
 					"grant_type=authorization_code",

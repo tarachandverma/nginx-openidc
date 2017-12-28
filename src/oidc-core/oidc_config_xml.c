@@ -28,6 +28,7 @@
 		void* tmp12;
 		void* tmp13;
 		void* tmp14;
+		void* tmp15;
 		char* str, *errorStr;
 	}actmap_tmp;
 	
@@ -44,8 +45,7 @@
 		ret->oidcSession=cookie_newObj(p);
 		cookie_setCookieName(p, ret->oidcSession, (char*)"oidc_session");
 		ret->relyingPartyHash=apr_hash_make (p);
-		ret->defaultRelyingParty=NULL;
-		ret->oidcProvider=NULL;
+		ret->oidcProviderHash=apr_hash_make (p);
 		return ret;
 	}
 	static void amx_printPathMappingMatchList(pool* p, array_header* arr){
@@ -150,7 +150,17 @@
 				printf("\t\r\nclientID=%s",relyingRarty->clientID);
 				printf("\t\t\r\n* clientSecret=%s",relyingRarty->clientSecret);
 				printf("\t\t\r\n* description=%s",relyingRarty->description);
-				printf("\t\t\r\n* domain=%s",relyingRarty->domain);
+				printf("\t\t\r\n* issuer=%s",relyingRarty->issuer);
+				printf("\r\n");
+			}
+		}
+
+		if(conf->oidcProviderHash!=NULL) {
+			printf("OidcProviderHash (%d):\r\n",apr_hash_count (conf->oidcProviderHash));
+			for(hi = apr_hash_first(p,conf->oidcProviderHash); hi; hi = apr_hash_next(hi)){
+				apr_hash_this(hi, &key, NULL, &val);
+				oidc_provider_xml* oidcProvider=(oidc_provider_xml*)val;
+				printf("\t\r\nIssuer=%s",oidcProvider->issuer);
 				printf("\r\n");
 			}
 		}
@@ -260,7 +270,7 @@
 		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
 		pa->isLoginRedirect=strcmp(body,"true")==0?1:0;
 		return 1;
-	}	
+	}
 	static int amx_setPageActionAdvancedTemplate(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
@@ -807,7 +817,7 @@
 		ret->clientID=NULL;
 		ret->clientSecret=NULL;
 		ret->description=NULL;
-		ret->domain=NULL;
+		ret->issuer=NULL;
 		ret->validateNonce=TRUE;
 		ret->redirectUri=NULL;
 		return ret;
@@ -817,11 +827,6 @@
 		int i;
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		for(i=0;attributes[i]; i += 2) {
-			if(strcmp(attributes[i],"default")==0){
-				amx->defaultRelyingParty=apr_pstrdup(p,(char*)attributes[i + 1]);
-			}
-		}
 		return 1;
 	}
 
@@ -834,8 +839,6 @@
 				rpX->clientID=apr_pstrdup(p,(char*)attributes[i + 1]);
 			}else if(strcmp(attributes[i],"clientSecret")==0){
 				rpX->clientSecret=apr_pstrdup(p,(char*)attributes[i + 1]);
-			}else if(strcmp(attributes[i],"domain")==0){
-				rpX->domain=apr_pstrdup(p,(char*)attributes[i + 1]);
 			}else if(strcmp(attributes[i],"validateNonce")==0){
 				rpX->validateNonce=STRTOBOOL(attributes[i + 1]);
 			}
@@ -881,18 +884,18 @@
 		}
 		return 1;
 	}
-	static int amx_setRelyingPartyDomain(pool* p,char* xPath,int type,const char *body,void* userdata){
+	static int amx_setRelyingPartyIssuer(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		relying_party_xml* rpX=(relying_party_xml*)ctmp->tmp14;
-		if(rpX!=NULL&&rpX->domain==NULL){
-			rpX->domain=apr_pstrdup(p,body);
+		if(rpX!=NULL&&rpX->issuer==NULL){
+			rpX->issuer=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
 	static int amx_setRelyingPartyValidateNonce(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		relying_party_xml* rpX=(relying_party_xml*)ctmp->tmp14;
-		if(rpX!=NULL&&rpX->domain==NULL){
+		if(rpX!=NULL&&rpX->issuer==NULL){
 			rpX->validateNonce=STRTOBOOL(body);
 		}
 		return 1;
@@ -905,67 +908,92 @@
 		}
 		return 1;
 	}
+
 	static oidc_provider_xml* amx_newOIDCProviderXml(pool* p){
 		oidc_provider_xml* ret;
 		ret=apr_palloc(p,sizeof(oidc_provider_xml));
 		ret->metadataUrl=NULL;
+		ret->isDefault=FALSE;
 		return ret;
 	}
 
 	static int amx_newOIDCProvider(pool* p,char* xPath,int type,const char ** attributes,void* userdata){
+		int i;
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		amx->oidcProvider=amx_newOIDCProviderXml(p);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)amx_newOIDCProviderXml(p);
+		for(i=0;attributes[i]; i += 2) {
+			if(strcmp(attributes[i],"issuer")==0){
+				oidcProviderX->issuer=apr_pstrdup(p,(char*)attributes[i + 1]);
+			}else if(strcmp(attributes[i],"isDefault")==0){
+				oidcProviderX->isDefault=STRTOBOOL(attributes[i + 1]);
+			}
+		}
 
+		ctmp->tmp15=oidcProviderX;
 		return 1;
+	}
+
+	static int amx_addOIDCProvider(pool* p,char* xPath,int type,void* userdata){
+		oidc_config_xml* amx=NULL;
+		oidc_provider_xml* oidcProviderX=NULL;
+			actmap_tmp* ctmp=(actmap_tmp*)userdata;
+			amx=(oidc_config_xml*)ctmp->conf;
+
+			if(amx!=NULL&&ctmp->tmp15!=NULL){
+				oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+				apr_hash_set (amx->oidcProviderHash,oidcProviderX->issuer,APR_HASH_KEY_STRING,oidcProviderX);
+			}
+			ctmp->tmp15=NULL;
+			return 1;
 	}
 
 	static int amx_setOIDCProviderMetadataUrl(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		if(amx->oidcProvider!=NULL) {
-			amx->oidcProvider->metadataUrl=apr_pstrdup(p,body);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+		if(oidcProviderX!=NULL) {
+			oidcProviderX->metadataUrl=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
 	static int amx_setOIDCProviderIssuer(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		if(amx->oidcProvider!=NULL) {
-			amx->oidcProvider->issuer=apr_pstrdup(p,body);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+		if(oidcProviderX!=NULL) {
+			oidcProviderX->issuer=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
 	static int amx_setOIDCProviderAuthorizationEndpoint(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		if(amx->oidcProvider!=NULL) {
-			amx->oidcProvider->authorizationEndpoint=apr_pstrdup(p,body);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+		if(oidcProviderX!=NULL) {
+			oidcProviderX->authorizationEndpoint=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
 	static int amx_setOIDCProviderTokenEndpoint(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		if(amx->oidcProvider!=NULL) {
-			amx->oidcProvider->tokenEndpoint=apr_pstrdup(p,body);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+		if(oidcProviderX!=NULL) {
+			oidcProviderX->tokenEndpoint=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
 	static int amx_setOIDCProviderJwksUri(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		if(amx->oidcProvider!=NULL) {
-			amx->oidcProvider->jwksUri=apr_pstrdup(p,body);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+		if(oidcProviderX!=NULL) {
+			oidcProviderX->jwksUri=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
 
 	static int amx_setOIDCProviderJwksJson(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
-		if(amx->oidcProvider!=NULL) {
-			amx->oidcProvider->jwksJson=apr_pstrdup(p,body);
+		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
+		if(oidcProviderX!=NULL) {
+			oidcProviderX->jwksJson=apr_pstrdup(p,body);
 		}
 		return 1;
 	}
@@ -990,6 +1018,7 @@
 		tmp.tmp12=NULL;
 		tmp.tmp13=NULL;
 		tmp.tmp14=NULL;
+		tmp.tmp15=NULL;
 		tmp.str=NULL;
 		tmp.errorStr=NULL;
 		
@@ -1035,17 +1064,17 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/clientID",0,NULL,amx_setRelyingPartyClientID,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/description",0,NULL,amx_setRelyingPartyDescription,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/clientSecret",0,NULL,amx_setRelyingPartyClientSecret,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/domain",0,NULL,amx_setRelyingPartyDomain,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/issuer",0,NULL,amx_setRelyingPartyIssuer,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/validateNonce",0,NULL,amx_setRelyingPartyValidateNonce,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/redirectUri",0,NULL,amx_setRelyingPartyRedirectUri,NULL, &tmp);
 
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider",0,amx_newOIDCProvider,NULL,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/metadataUrl",0,NULL,amx_setOIDCProviderMetadataUrl,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/issuer",0,NULL,amx_setOIDCProviderIssuer,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/authorizationEndpoint",0,NULL,amx_setOIDCProviderAuthorizationEndpoint,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/tokenEndpoint",0,NULL,amx_setOIDCProviderTokenEndpoint,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/jwksUri",0,NULL,amx_setOIDCProviderJwksUri,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcProvider/jwksJson",0,NULL,amx_setOIDCProviderJwksJson,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider",0,amx_newOIDCProvider,NULL,amx_addOIDCProvider, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/metadataUrl",0,NULL,amx_setOIDCProviderMetadataUrl,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/issuer",0,NULL,amx_setOIDCProviderIssuer,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/authorizationEndpoint",0,NULL,amx_setOIDCProviderAuthorizationEndpoint,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/tokenEndpoint",0,NULL,amx_setOIDCProviderTokenEndpoint,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/jwksUri",0,NULL,amx_setOIDCProviderJwksUri,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/jwksJson",0,NULL,amx_setOIDCProviderJwksJson,NULL, &tmp);
 
 		result=xc_beginParsingTextResponse(xCore,file);
 		return result;
