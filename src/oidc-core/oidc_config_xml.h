@@ -68,7 +68,7 @@
 		Cookie*				rpSession;
 		Cookie*				oidcSession;
 		apr_hash_t* relyingPartyHash;
-		apr_hash_t* oidcProviderHash;
+		array_header* oidcProviders;
 	}oidc_config_xml;
 	
 	oidc_config_xml* amx_newObj(pool* p);

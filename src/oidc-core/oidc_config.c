@@ -456,19 +456,17 @@
 			}
 		}
 
-		if(axml->oidcProviderHash==NULL) {
-			return apr_pstrdup(p,"oidcProvider is NULL");
+		if(axml->oidcProviders==NULL||axml->oidcProviders->nelts==0) {
+			return apr_pstrdup(p,"oidcProviders are missing");
 		}
 
 		// set default to NULL
 		ret->oidcProvider = NULL;
 
 		// iterate thru all the providers
-		for (hi = apr_hash_first(p,axml->oidcProviderHash); hi; hi = apr_hash_next(hi)) {
-			void *val=NULL;
-			apr_hash_this(hi, NULL, NULL, &val);
-			if(val!=NULL){
-				oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)val;
+		for(x=0;x<axml->oidcProviders->nelts;x++) {
+			oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)cu_getElement(axml->oidcProviders,x);
+			if(oidcProviderX!=NULL){
 				oidc_provider* oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
 
 				// copy one by one

@@ -1,23 +1,29 @@
 <?xml version="1.0"?>
 <oidcConfig>
-	<!-- OpenID-Connect Provider metadata url -->	 
-	 <oidcProvider>
-	 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
-	 	<issuer>https://accounts.google.com</issuer>
-	 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
-	 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
-	 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	 		 	
-	 </oidcProvider>
-
-	<!-- relying parties configuration -->
-	 <relyingParties default="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com">
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" domain=".com" validateNonce="true">
+	<!-- OpenID-Connect Provider metadata url -->
+	 <oidcProviders>	
+	 	<!-- first one is default if default is not set with isDefault=true attribute --> 
+		 <oidcProvider issuer="https://accounts.google.com" >
+		 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
+		 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
+		 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
+		 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	
+		 </oidcProvider>		 
+	 </oidcProviders>
+	 
+	<!-- relying parties configuration for callback handling -->
+	 <relyingParties>
+	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" validateNonce="true">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
+	 		<issuer>https://accounts.google.com</issuer> 		
 	 	</relyingParty>
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
+	 <rpSession name="rp_session" lifetime="30"  httpOnly="true" />
+ 	 <oidcSession name="oidc_session" lifetime="2"  httpOnly="true" />
+	 	 
      <oidcActions>
  
 		<!-- nginx oidc internal verification handlers for what's configuration params are loaded in memory -->
@@ -32,17 +38,13 @@
 	    <!-- post auth phase id_token validation actions -->
 		<action id="oidc-login">
 		    <description>oidc login</description>
-		    <isForward>false</isForward>
-		    <regex>(.*)</regex>
-			<advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{HTTP_X-RP-SESSION}r&state=($0U)]]></uri>
+			<isLoginRedirect>true</isLoginRedirect>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback]]></uri>
 		</action>
 		<action id="oidc-login-strip-invalid-token"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
-		    <isForward>false</isForward>
-		    <regex><![CDATA[(.*)(\?|&)id_token(.*)]]></regex> <!-- to avoid passing expired id_token -->
-		    <advancedTemplate>true</advancedTemplate>
-		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback&nonce=%{X-RP-SESSION}r&state=($0U)]]></uri>
+		    <isLoginRedirect>true</isLoginRedirect>
+		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback]]></uri>
 		</action>
 		<action id="oidc_show_error">
 		    <description>error returned from idp</description>
@@ -53,12 +55,6 @@
 		    <description>error returned from idp</description>
 		    <isForward>false</isForward>
 		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you are successfully able to access this page"}]]></response>
-		</action>		
-		<action id="goto-resource">
-		    <description>send to resource sent in state</description>
-		    <isForward>false</isForward>
-			<advancedTemplate>true</advancedTemplate>		    
-		    <uri><![CDATA[%{state}q]]></uri>
 		</action>
 		<action id="oidc_api_success">
 		    <description>api success returned from idp</description>
@@ -117,9 +113,7 @@
 	    <location path="^/oauth2/callback\?(.*)error=">
 			<oidcAction>oidc_show_error</oidcAction>			
 	    </location>
-	    <location path="^/oauth2/callback\?(.*)state=">
-			<oidcAction>goto-resource</oidcAction>			
-	    </location>   
+   
         <!-- end of callback rules -->
         
         <!-- APIs authorizatioin -->        

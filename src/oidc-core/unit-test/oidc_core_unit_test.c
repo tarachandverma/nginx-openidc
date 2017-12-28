@@ -322,15 +322,15 @@ static void oauthutil_parseAndValidateGoogleIDToken_test(mm_logger* logger,CuTes
 
 CuSuite* oidccore_GetSuite() {
   CuSuite* suite = CuSuiteNew();
-  SUITE_ADD_TEST(suite, rc_getInfoTest);
-  SUITE_ADD_TEST(suite, rc_matchByStringsTest);
-  SUITE_ADD_TEST(suite, rc_matchByStringsIgnoreCaseTest);
-  SUITE_ADD_TEST(suite, rc_matchByStringsReturnDetailsTest);
-  SUITE_ADD_TEST(suite, rc_matchByStringsPatternTest);
-  SUITE_ADD_TEST(suite, rc_isRegexValidTest);
+//  SUITE_ADD_TEST(suite, rc_getInfoTest);
+//  SUITE_ADD_TEST(suite, rc_matchByStringsTest);
+//  SUITE_ADD_TEST(suite, rc_matchByStringsIgnoreCaseTest);
+//  SUITE_ADD_TEST(suite, rc_matchByStringsReturnDetailsTest);
+//  SUITE_ADD_TEST(suite, rc_matchByStringsPatternTest);
+//  SUITE_ADD_TEST(suite, rc_isRegexValidTest);
   SUITE_ADD_TEST(suite, oidc_loadConfFile_test);
-  SUITE_ADD_TEST(suite, oauthutil_generateAndParseAndValidateIDToken_test);
-  SUITE_ADD_TEST(suite, oauthutil_parseAndValidateExpiredIDToken_test);
-  SUITE_ADD_TEST(suite, oauthutil_parseAndValidateGoogleIDToken_test);
+//  SUITE_ADD_TEST(suite, oauthutil_generateAndParseAndValidateIDToken_test);
+//  SUITE_ADD_TEST(suite, oauthutil_parseAndValidateExpiredIDToken_test);
+//  SUITE_ADD_TEST(suite, oauthutil_parseAndValidateGoogleIDToken_test);
 return suite;
 }

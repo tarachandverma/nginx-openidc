@@ -10,7 +10,7 @@
 
 #define CONST_INIT_PAGE_ACTIONS_ELTS		4
 #define CONST_INIT_MATCH_LIST_ELTS			4
-
+#define CONST_INIT_OIDC_PROVIDERS_ELTS		2
 
 	typedef struct actmap_tmp{
 		oidc_config_xml* conf;
@@ -45,7 +45,7 @@
 		ret->oidcSession=cookie_newObj(p);
 		cookie_setCookieName(p, ret->oidcSession, (char*)"oidc_session");
 		ret->relyingPartyHash=apr_hash_make (p);
-		ret->oidcProviderHash=apr_hash_make (p);
+		ret->oidcProviders=apr_array_make (p,CONST_INIT_OIDC_PROVIDERS_ELTS,sizeof(oidc_provider_xml*));
 		return ret;
 	}
 	static void amx_printPathMappingMatchList(pool* p, array_header* arr){
@@ -155,12 +155,12 @@
 			}
 		}
 
-		if(conf->oidcProviderHash!=NULL) {
-			printf("OidcProviderHash (%d):\r\n",apr_hash_count (conf->oidcProviderHash));
-			for(hi = apr_hash_first(p,conf->oidcProviderHash); hi; hi = apr_hash_next(hi)){
-				apr_hash_this(hi, &key, NULL, &val);
-				oidc_provider_xml* oidcProvider=(oidc_provider_xml*)val;
-				printf("\t\r\nIssuer=%s",oidcProvider->issuer);
+		if(conf->oidcProviders!=NULL) {
+			printf("OidcProviders (%d):\r\n",conf->oidcProviders->nelts);
+			for(x=0;x<conf->oidcProviders->nelts;x++){
+				oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)cu_getElement(conf->oidcProviders,x);
+				printf("\t\r\nIssuer=%s[%d]", SAFESTR(oidcProviderX->issuer), x);
+				printf("\t\r\nMetadataUrl=%s[%d]", SAFESTR(oidcProviderX->metadataUrl), x);
 				printf("\r\n");
 			}
 		}
@@ -911,7 +911,8 @@
 
 	static oidc_provider_xml* amx_newOIDCProviderXml(pool* p){
 		oidc_provider_xml* ret;
-		ret=apr_palloc(p,sizeof(oidc_provider_xml));
+		ret=apr_pcalloc(p,sizeof(oidc_provider_xml));
+		ret->issuer=NULL;
 		ret->metadataUrl=NULL;
 		ret->isDefault=FALSE;
 		return ret;
@@ -936,13 +937,14 @@
 
 	static int amx_addOIDCProvider(pool* p,char* xPath,int type,void* userdata){
 		oidc_config_xml* amx=NULL;
-		oidc_provider_xml* oidcProviderX=NULL;
+		oidc_provider_xml* oidcProviderX=NULL, **position;
 			actmap_tmp* ctmp=(actmap_tmp*)userdata;
 			amx=(oidc_config_xml*)ctmp->conf;
 
 			if(amx!=NULL&&ctmp->tmp15!=NULL){
 				oidcProviderX=(oidc_provider_xml*)ctmp->tmp15;
-				apr_hash_set (amx->oidcProviderHash,oidcProviderX->issuer,APR_HASH_KEY_STRING,oidcProviderX);
+				position=(oidc_provider_xml**)apr_array_push(amx->oidcProviders);
+				*position=oidcProviderX;
 			}
 			ctmp->tmp15=NULL;
 			return 1;
