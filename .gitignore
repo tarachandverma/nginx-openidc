@@ -5,3 +5,5 @@
 *.html
 *.png
 *.gcno
+*.gcda
+*.css

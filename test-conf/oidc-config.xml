@@ -8,7 +8,7 @@
 		 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
 		 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
 		 	<jwksUri>https://www.googleapis.com/oauth2/v3/certs</jwksUri>	
-		 </oidcProvider>
+		 </oidcProvider>		 
 	 </oidcProviders>
 	 
 	<!-- relying parties configuration for callback handling -->
@@ -55,12 +55,6 @@
 		    <description>error returned from idp</description>
 		    <isForward>false</isForward>
 		    <response code="200" contentType="application/json"><![CDATA[{"responsecode":200, "description":"you are successfully able to access this page"}]]></response>
-		</action>		
-		<action id="goto-resource">
-		    <description>send to resource sent in state</description>
-		    <isForward>false</isForward>
-			<advancedTemplate>true</advancedTemplate>		    
-		    <uri><![CDATA[%{state}q]]></uri>
 		</action>
 		<action id="oidc_api_success">
 		    <description>api success returned from idp</description>
