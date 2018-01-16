@@ -185,7 +185,7 @@ openid-connect configuration : oidc-conf.xml
 <oidcConfig>
    <oidcProviders>
 	<!-- OpenID-Connect Provider metadata url -->	 
-	 <oidcProvider issuer="$$OP issuer$$">
+	 <oidcProvider id="$$unique identifier$$" issuer="$$OP issuer$$">
 	 	<metadataUrl>$$OP metadata url$$</metadataUrl>
 		<!--you can set individua params as well if metadata is not available -->
 	 	<authorizationEndpoint>$$OP authorization_end_point$$</authorizationEndpoint>
@@ -242,19 +242,19 @@ openid-connect configuration : oidc-conf.xml
    </oidcProviders>
 
 	<!-- relying parties configuration, you can configure multiple relying parties, default must be configured and usually same as first one in case there is only one -->
-	 <relyingParties default="$$YOUR CLIENT ID for APP1 $$"><!-- default is mendatory and is same as first one  -->
-	 	<relyingParty clientID="$$YOUR CLIENT ID for app1$$" clientSecret="$$YOUR CLIENT SECRET for app1$$" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 <relyingParties>
+	 	<relyingParty id="$$unique identifier1$$" clientID="$$YOUR CLIENT ID for app1$$" clientSecret="$$YOUR CLIENT SECRET for app1$$" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
 	 		<issuer>$$OIDC ISSUER FROM ABOVE LIST TO SELECT APPROPRIATE TOKEN EXCHANGE END-POINT FOR ID_TOKEN$$</issuer>	 		
 	 	</relyingParty>
-	 	<relyingParty clientID="$$YOUR CLIENT ID for app2 $$" clientSecret="$$YOUR CLIENT SECRET for app2$$" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 	<relyingParty id="$$unique identifier2$$" clientID="$$YOUR CLIENT ID for app2 $$" clientSecret="$$YOUR CLIENT SECRET for app2$$" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
 	 		<issuer>$$OIDC ISSUER FROM ABOVE LIST TO SELECT APPROPRIATE TOKEN EXCHANGE END-POINT FOR ID_TOKEN$$</issuer>	 		
 	 	</relyingParty>
 	 	...
-	 	<relyingParty clientID="$$YOUR CLIENT ID for appn $$" clientSecret="$$YOUR CLIENT SECRET for appn$$" validateNonce="true/false depending on if you want to validate JWT nonce">
+	 	<relyingParty id="$$unique identifierN$$" clientID="$$YOUR CLIENT ID for appn $$" clientSecret="$$YOUR CLIENT SECRET for appn$$" validateNonce="true/false depending on if you want to validate JWT nonce">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>$$CALLBACK URL WHERE ID_TOKEN OR CODE WILL BE RECIEVED$$</redirectUri>
 	 		<issuer>$$OIDC ISSUER FROM ABOVE LIST TO SELECT APPROPRIATE TOKEN EXCHANGE END-POINT FOR ID_TOKEN$$</issuer>	 		
@@ -274,7 +274,7 @@ openid-connect configuration : oidc-conf.xml
 	    <action id="oidc_headers"><handler>oidc_headers</handler></action>	    
 	    <action id="oidc_index"><handler>oidc_index</handler></action>
 
-        <action id="$$unique-action-name1$$" debug=$$true/false$$><!-- echo hostname of front-end box and/or echoes backend proxied box if its proxy request-->
+        <action id="$$unique-action-name1$$" debug=$$true/false$$ type="$$login|callback|action$$"><!-- debug echo hostname of front-end box and/or echoes backend proxied box if its proxy request, default action type is authorize -->
     	    <description>describe what action does in few words</description> <!-- string -->
             <isForward>true/false</isForward> <!-- boolean set it to true if its internal redirect, false for 302 redirect, default value true -->
             <isPermanent>true/false</isPermanent> <!-- boolean, set it to true if permanent redirect 301 -->
@@ -287,7 +287,9 @@ openid-connect configuration : oidc-conf.xml
     		</requestHeaders>
     		<responseheaders> <!-- array of header -->
         		<header name="$$header-name$$" do="add|set|append|merge|unset" matchList="$$match-list-name$$">$$header-value$$</header>
-    		</responseheaders>                                 
+    		</responseheaders>
+			<oidcProvider>$$unique identifier of oidcProvider as defined in oidcProviders$$</oidcProvider>
+			<relyingParty>$$unique identifier of RelyingParry as defined in relyingParties$$</relyingParty>                                 
         </action>                                                     
     </oidcActions><!-- end of page-actions -->
 

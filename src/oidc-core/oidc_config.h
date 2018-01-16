@@ -94,8 +94,9 @@
 		array_header* requestHeaders;		// array of action_header*
 		array_header* responseHeaders;		// array of action_header*
 		action_response* response;		
-		char* uri;
-		unsigned int isForward:1,isPermanent:1,isDebug:1, advancedTemplate:1,isLoginRedirect:1;
+		char* uri, *oidcProvider, *relyingParty;
+		int type;
+		unsigned int isForward:1,isPermanent:1,isDebug:1, advancedTemplate:1;
 	}page_action;
 
 	typedef struct pathmapping_action{
@@ -115,6 +116,7 @@
 	}path_mappings_rec;
 	
 	typedef struct relying_party{
+		char* id;
 		char* description;
 		char *clientID;
 		char* clientSecret;
@@ -124,6 +126,7 @@
 	}relying_party;
 	
 	typedef struct oidc_providerl{
+		char* id;
 		char* metadataUrl;
 		char* issuer;
 		char* authorizationEndpoint;
@@ -141,7 +144,9 @@
 		Cookie*	 rpSession;
 		Cookie*	 oidcSession;
 		shapr_hash_t* relyingPartyHash;
+		shapr_hash_t* relyingPartyIdsHash;
 		shapr_hash_t* oidcProviderHash;
+		shapr_hash_t* oidcProviderIdsHash;
 		oidc_provider* oidcProvider;
 	}oidc_config;
 	
@@ -154,8 +159,10 @@
 	void am_printAll(pool* p, oidc_config* oidcConfig);
 	oauth_jwskey* am_getJWSKeyByKeyID(shapr_hash_t* keyHash, char* keyID);
 	relying_party* am_getRelyingPartyByClientID(shapr_hash_t* relyingPartyHash, const char* clientID);
+	relying_party* am_getRelyingPartyById(shapr_hash_t* relyingPartyIdsHash, const char* id);
 	relying_party* am_getRelyingPartyByRedirectUri(pool*p, shapr_hash_t* relyingPartyHash, const char* currentRedirectUri);
 	oidc_provider* am_getOidcProviderByIssuer(shapr_hash_t* oidcProviderHash, const char* issuer);
+	oidc_provider* am_getOidcProviderById(shapr_hash_t* oidcProviderIdsHash, const char* id);
 
 	typedef struct oauth_jwt_header {
 		char* algorithm;
@@ -216,4 +223,5 @@
 	void oauthutil_printIDToken(pool* p, oauth_jwt* IDToken);
 	const char* oauthutil_serializeJWTClaimNoEncoding(pool* p, oauth_jwt_claim* claim);
 
+	const char* am_getActionTypeStr(action_types type) ;
 #endif //__TCREWRITE_ACTION_MAPPINGS__H_

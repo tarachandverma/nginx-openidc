@@ -21,7 +21,7 @@
 #define OAUTH_IDTOKEN_MAX_SIZE		8192
 
 // subrequest types
-#define SUB_REQUEST_TYPE_UNKNOWS					0
+#define SUB_REQUEST_TYPE_UNKNOWN					0
 #define SUB_REQUEST_TYPE_OAUTH_TOKEN				1
 #define SUB_REQUEST_TYPE_AUTHENTICATE			2
 #define SUB_REQUEST_TYPE_AUTHORIZE					3
@@ -1360,6 +1360,15 @@ static int ngx_http_openidc_execPageAction(ngx_http_openidc_request_t *r, page_a
 			r->handler=paction->handler_internal;
 		}
 
+		if(paction->type==action_callback) {
+			// send to target url if found in state
+			uri_components *url = &r->parsed_uri;
+			char* state = url_getParam(r->pool, url->query, "state");
+			if(state!=NULL) {
+				return ngx_http_openidc_execUri(r, state, FALSE, FALSE, NULL);
+			}
+		}
+
 		if(paction->uri!=NULL){
 			
 			char* paction_uri = paction->uri;
@@ -1381,7 +1390,7 @@ static int ngx_http_openidc_execPageAction(ngx_http_openidc_request_t *r, page_a
 				destUri = ngx_http_openidc_parseString(r->pool, apr_pstrdup(r->pool, destUri), r);
 			}
 
-			if(paction->isLoginRedirect==TRUE){
+			if(paction->type==action_login){
 				destUri = apr_pstrcat(r->pool, destUri, "&state=", url_encode2(r->pool, originUri), "&nonce=", apr_table_get(r->headers_in, OIDC_RP_SESSIONID), NULL);
 			}
 
@@ -1863,6 +1872,8 @@ static ngx_int_t ngx_http_openidc_checkForAccess(ngx_http_request_t *httpRequest
     apr_uri_parse(r->pool, uri, &r->parsed_uri);
     r->uri = r->parsed_uri.path ? r->parsed_uri.path : apr_pstrdup(r->pool, "/");
     
+	//printf("%s, %d r->uri%s: internal=%d\n", __FILE__, __LINE__, r->uri, httpRequest->internal);
+
 	// set headers_in
 	ngx_http_openidc_setHeadersIn(httpRequest, r, conf->config->configCore->oidcHeaderPrefix);
 
@@ -1938,15 +1949,6 @@ static ngx_int_t ngx_http_openidc_checkForAccess(ngx_http_request_t *httpRequest
 				}
 			}
 		}
-	}else{
-		// send to target url if found in state
-		uri_components *url = &r->parsed_uri;
-		char* state = url_getParam(r->pool, url->query, "state");
-		if(state!=NULL) {
-			retCode = ngx_http_openidc_execUri(r, state, FALSE, FALSE, NULL);
-		}
-
-		apr_table_do(ngx_http_openidc_addResponseHeaderCallback, httpRequest, r->headers_out, NULL);
 	}
 	
 	// release memory
@@ -2128,6 +2130,18 @@ static const char* authzoidc_getActionStr(header_actions action) {
 	return "null";
 }
 
+static const char* authzoidc_getActionTypeStr(action_types type) {
+	if (type==action_login)
+		return "login";
+    else if (type==action_denial)
+		return "denial";
+    else if (type==action_authorize)
+		return "authorize";
+    else if (type==action_callback)
+		return "callback";
+	return "null";
+}
+
 void authzoidc_displayActionHeader(ngx_http_openidc_request_t*r, action_header* hdr) {
 	
 	if(hdr==NULL) return;
@@ -2157,12 +2171,14 @@ static void rewrite_pageaction_displayAll(ngx_http_openidc_request_t *r,page_act
 		if(pa->description!=NULL){ngx_http_openidc_rprintf1(r," [%s]</td></tr>",pa->description);}else{ngx_http_openidc_rprintf(r,"</td></tr>");}
 		
 		if(pa->regex!=NULL){ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>Regex: %s</td></tr>",SAFESTR(pa->regex));}
+		if(pa->oidcProvider!=NULL){ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>OIDCProvider: %s</td></tr>",SAFESTR(pa->oidcProvider));}
+		if(pa->relyingParty!=NULL){ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>RelyingParty: %s</td></tr>",SAFESTR(pa->relyingParty));}
 		if(pa->handler_internal!=NULL){ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>Handler: %s</td></tr>",pa->handler_internal);}
 		if(pa->response!=NULL){ngx_http_openidc_rprintf3(r,"<tr><td>&nbsp;</td><td>Response[%d:%s]: <xmp>%s</xmp></td></tr>",pa->response->code, pa->response->contentType, pa->response->body);}
 		if(pa->uri!=NULL) { ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>Uri:%s</td></tr>",pa->uri); }
 		ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>isForward: %s</td></tr>",pa->isForward!=1?"false":"true");
 		ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>isPermanent: %s</td></tr>",pa->isPermanent!=1?"false":"true");
-		if(pa->isLoginRedirect){ngx_http_openidc_rprintf(r,"<tr><td>&nbsp;</td><td>isLoginRedirect: true</td></tr>");}
+		ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>type: %s</td></tr>", authzoidc_getActionTypeStr(pa->type));
 		if(pa->advancedTemplate==TRUE){
 			ngx_http_openidc_rprintf(r,"<tr><td>&nbsp;</td><td>advancedTemplate: true</td></tr>");
 		}
@@ -2506,7 +2522,8 @@ static void authzoidc_displayOidcProviders(ngx_http_openidc_request_t *r, shapr_
 		   if(val!=NULL){
 			  oidcProvider=(oidc_provider*)val;
 				if(oidcProvider!=NULL) {
-					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>Issuer</strong></font><td>%s</td></td></tr>", oidcProvider->issuer);
+					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>ID</strong></font><td>%s</td></td></tr>", oidcProvider->id);
+					ngx_http_openidc_rprintf1(r,"<tr><td>Issuer</td><td>%s</td></tr>",oidcProvider->issuer);
 					ngx_http_openidc_rprintf1(r,"<tr><td>MetadataUrl</td><td>%s</td></tr>",oidcProvider->metadataUrl);
 					ngx_http_openidc_rprintf1(r,"<tr><td>AuthorizationEndpoint</td><td>%s</td></tr>",oidcProvider->authorizationEndpoint);
 					ngx_http_openidc_rprintf1(r,"<tr><td>JwksUri</td><td>%s</td></tr>",oidcProvider->jwksUri);
@@ -2538,8 +2555,9 @@ static void authzoidc_displayRelyingParties(ngx_http_openidc_request_t *r, shapr
 		   if(val!=NULL){
 			   relyingParty=(relying_party*)val;
 				if(relyingParty!=NULL) {
-					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>ClientID</strong></font><td>%s</td></td></tr>", relyingParty->clientID);
+					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>id</strong></font><td>%s</td></td></tr>", relyingParty->id);
 					ngx_http_openidc_rprintf1(r,"<tr><td>Description</td><td>%s</td></tr>",relyingParty->description);
+					ngx_http_openidc_rprintf1(r,"<tr><td>ClientID</td><td>%s</td></tr>",relyingParty->clientID);
 					ngx_http_openidc_rprintf1(r,"<tr><td>ClientSecret</td><td>%s</td></tr>",relyingParty->clientSecret);
 					ngx_http_openidc_rprintf1(r,"<tr><td>RedirectUri</td><td>%s</td></tr>",relyingParty->redirectUri);
 					ngx_http_openidc_rprintf1(r,"<tr><td>Issuer</td><td>%s</td></tr>",relyingParty->issuer);
@@ -2800,7 +2818,7 @@ static void authzoidc_displayRelyingParties(ngx_http_openidc_request_t *r, shapr
          }
  	return oidc_showHeaders(r,config);
  }
- 
+
 int oidc_config_core_status(ngx_http_openidc_request_t *r, Config *config) {
 
  	if (strcmp(r->handler, "oidc_config_core_status")) {
@@ -2992,8 +3010,18 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
     }else if(url_get_param(url->query, (char*)"code", tmp, OAUTH_IDTOKEN_MAX_SIZE)>0){
 		char* authorizationCode = apr_pstrdup(r->pool, tmp);
 		char* currentRedirectUri = ngx_http_openidc_getFullRequestUrl(r);
+		page_action* action = NULL;
+
+		// get callback action
+		path_mapping* pathmapping=am_getPathMapping_PostAuth(r->pool, oidcConfig, r->unparsed_uri,r->connection_remote_ip,r->headers_in,NULL);
+		if(pathmapping!=NULL){
+			action=am_getMatchingPageAction(r->pool,pathmapping->pmactions,r->unparsed_uri,r->connection_remote_ip,r->headers_in,NULL);
+		}
+		if(action==NULL||action->type!=action_callback||action->relyingParty==NULL||action->oidcProvider==NULL) {
+			return NGX_DECLINED;
+		}
 		//printf("%s:%d CurrentRedirectUri=[%s]\n", __FILE__, __LINE__, currentRedirectUri);
-		relying_party* relyingParty = am_getRelyingPartyByRedirectUri(r->pool, oidcConfig->relyingPartyHash, currentRedirectUri);
+		relying_party* relyingParty = am_getRelyingPartyById(oidcConfig->relyingPartyIdsHash, action->relyingParty);
 		if(relyingParty!=NULL) {
 			char* requestBody = apr_pstrcat(r->pool,
 					"grant_type=authorization_code",

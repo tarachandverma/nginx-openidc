@@ -11,6 +11,14 @@ typedef enum {
     header_edit = 'r'              /* change value by regexp */
 } header_actions;
 
+typedef enum {
+    action_login = 'l',              /* login action */
+    action_denial = 'd',              /* denial action*/
+    action_authorize = 'a',           /*  authorize action */
+    action_callback = 'c'            /* callback action */
+} action_types;
+
+
 // token encryption/decryption buffer size
 #define OAUTH_CRYPTO_BUFSIZE				1024
 #define OAUTH_BASE64_BUFSIZE				4096

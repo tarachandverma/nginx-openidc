@@ -98,6 +98,15 @@
 					if(pa->handler!=NULL){
 						printf(",handler:%s",pa->handler);
 					}
+					if(pa->type){
+						printf(",type:%d",pa->type);
+					}
+					if(pa->oidcProvider!=NULL){
+						printf(",OidcProvider:%s",pa->oidcProvider);
+					}
+					if(pa->relyingParty!=NULL){
+						printf(",RelyingParty:%s",pa->relyingParty);
+					}
 					printf(", isForward:%d,description:%s}",pa->isForward,pa->description);
 					if(pa->requestHeaders!=NULL&&pa->requestHeaders->nelts>0){
 						printf("\r\n\t\t>Request headers [%d]\n", pa->requestHeaders->nelts);
@@ -147,6 +156,7 @@
 			for(hi = apr_hash_first(p,conf->relyingPartyHash); hi; hi = apr_hash_next(hi)){
 				apr_hash_this(hi, &key, NULL, &val);
 				relying_party_xml* relyingRarty=(relying_party_xml*)val;
+				printf("\t\r\nID=%s",relyingRarty->id);
 				printf("\t\r\nclientID=%s",relyingRarty->clientID);
 				printf("\t\t\r\n* clientSecret=%s",relyingRarty->clientSecret);
 				printf("\t\t\r\n* description=%s",relyingRarty->description);
@@ -159,6 +169,7 @@
 			printf("OidcProviders (%d):\r\n",conf->oidcProviders->nelts);
 			for(x=0;x<conf->oidcProviders->nelts;x++){
 				oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)cu_getElement(conf->oidcProviders,x);
+				printf("\t\r\nID=%s[%d]", SAFESTR(oidcProviderX->id), x);
 				printf("\t\r\nIssuer=%s[%d]", SAFESTR(oidcProviderX->issuer), x);
 				printf("\t\r\nMetadataUrl=%s[%d]", SAFESTR(oidcProviderX->metadataUrl), x);
 				printf("\r\n");
@@ -175,7 +186,7 @@
 		ret->description=NULL;
 		ret->isForward=1;
 		ret->isPermanent=0;
-		ret->isLoginRedirect=0;
+		ret->type=action_authorize;
 		ret->regex=NULL;
 		ret->handler=NULL;
 		ret->isDebug=0;
@@ -184,6 +195,8 @@
 		ret->responseHeaders = apr_array_make(p, 1, sizeof(action_header_xml*));
 		ret->uri =NULL;
 		ret->response = NULL;
+		ret->oidcProvider=NULL;
+		ret->relyingParty=NULL;
 		return ret;
 	}
 	
@@ -209,6 +222,15 @@
 				}
 			}else if(strcmp(attributes[i],"debug")==0){
 				pax->isDebug=STRTOBOOL((char*)attributes[i + 1]);				
+			}else if(strcmp(attributes[i],"type")==0){
+				if (strcmp((char*)attributes[i + 1], "login")==0)
+					pax->type = action_login;
+			    else if (strcmp((char*)attributes[i + 1], "callback")==0)
+			    	pax->type = action_callback;
+			    else if (strcmp((char*)attributes[i + 1], "authorize")==0)
+			    	pax->type = action_authorize;
+			    else if (strcmp((char*)attributes[i + 1], "denial")==0)
+			    	pax->type = action_denial;
 			}
 		}
 		return 1;
@@ -253,6 +275,22 @@
 		
 		return 1;
 	}
+	static int amx_setPageActionOidcProvider(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
+		if(pa!=NULL){
+			pa->oidcProvider=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
+	static int amx_setPageActionRelyingParty(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
+		if(pa!=NULL){
+			pa->relyingParty=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
 	static int amx_setPageActionIsForward(pool* p,char* xPath,int type,const char *body,void* userdata){
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
@@ -263,12 +301,6 @@
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
 		pa->isPermanent=strcmp(body,"true")==0?1:0;
-		return 1;
-	}
-	static int amx_setPageActionIsLoginRedirect(pool* p,char* xPath,int type,const char *body,void* userdata){
-		actmap_tmp* ctmp=(actmap_tmp*)userdata;
-		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
-		pa->isLoginRedirect=strcmp(body,"true")==0?1:0;
 		return 1;
 	}
 	static int amx_setPageActionAdvancedTemplate(pool* p,char* xPath,int type,const char *body,void* userdata){
@@ -287,7 +319,7 @@
 				pageact=(page_action_xml*)ctmp->tmp;
 				apr_hash_set (amx->page_actions_hash,pageact->id,APR_HASH_KEY_STRING,ctmp->tmp);
 				// loginRedirect means always 302 meaning isForward false
-				if(pageact->isLoginRedirect||pageact->response!=NULL) { pageact->isForward = FALSE; }
+				if(pageact->type==action_login||pageact->response!=NULL) { pageact->isForward = FALSE; }
 			}
 			ctmp->tmp=NULL;
 			return 1;
@@ -362,6 +394,7 @@
 		}
 		return 1;
 	}
+
 	static int amx_newPathMappingAction(pool* p,char* xPath,int type,const char ** attributes,void* userdata){
 		int i;
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
@@ -820,6 +853,7 @@
 		ret->issuer=NULL;
 		ret->validateNonce=TRUE;
 		ret->redirectUri=NULL;
+		ret->id=NULL;
 		return ret;
 	}
 
@@ -835,7 +869,9 @@
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		relying_party_xml* rpX=(relying_party_xml*)amx_newRelyingPartyXml(p);
 		for(i=0;attributes[i]; i += 2) {
-			if(strcmp(attributes[i],"clientID")==0){
+			if(strcmp(attributes[i],"id")==0){
+				rpX->id=apr_pstrdup(p,(char*)attributes[i + 1]);
+			}else if(strcmp(attributes[i],"clientID")==0){
 				rpX->clientID=apr_pstrdup(p,(char*)attributes[i + 1]);
 			}else if(strcmp(attributes[i],"clientSecret")==0){
 				rpX->clientSecret=apr_pstrdup(p,(char*)attributes[i + 1]);
@@ -854,7 +890,7 @@
 
 			if(amx!=NULL&&ctmp->tmp14!=NULL){
 				rpX=(relying_party_xml*)ctmp->tmp14;
-				apr_hash_set (amx->relyingPartyHash,rpX->clientID,APR_HASH_KEY_STRING,rpX);
+				apr_hash_set (amx->relyingPartyHash,rpX->id,APR_HASH_KEY_STRING,rpX);
 			}
 			ctmp->tmp14=NULL;
 			return 1;
@@ -912,6 +948,7 @@
 	static oidc_provider_xml* amx_newOIDCProviderXml(pool* p){
 		oidc_provider_xml* ret;
 		ret=apr_pcalloc(p,sizeof(oidc_provider_xml));
+		ret->id=NULL;
 		ret->issuer=NULL;
 		ret->metadataUrl=NULL;
 		ret->isDefault=FALSE;
@@ -924,7 +961,9 @@
 		oidc_config_xml* amx=(oidc_config_xml*)ctmp->conf;
 		oidc_provider_xml* oidcProviderX=(oidc_provider_xml*)amx_newOIDCProviderXml(p);
 		for(i=0;attributes[i]; i += 2) {
-			if(strcmp(attributes[i],"issuer")==0){
+			if(strcmp(attributes[i],"id")==0){
+				oidcProviderX->id=apr_pstrdup(p,(char*)attributes[i + 1]);
+			}else if(strcmp(attributes[i],"issuer")==0){
 				oidcProviderX->issuer=apr_pstrdup(p,(char*)attributes[i + 1]);
 			}else if(strcmp(attributes[i],"isDefault")==0){
 				oidcProviderX->isDefault=STRTOBOOL(attributes[i + 1]);
@@ -1034,7 +1073,6 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/description",0,NULL,amx_setPageActionDescription,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/isForward",0,NULL,amx_setPageActionIsForward,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/isPermanent",0,NULL,amx_setPageActionIsPermanent,NULL, &tmp);
-		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/isLoginRedirect",0,NULL,amx_setPageActionIsLoginRedirect,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/advancedTemplate",0,NULL,amx_setPageActionAdvancedTemplate,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/uri",0,NULL,amx_setPageActionUri,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/regex",0,NULL,amx_setPageActionRegex,NULL, &tmp);
@@ -1042,6 +1080,8 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/requestHeaders/header",0,amx_newActionHeader,amx_setActionRequestHeader,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/responseHeaders/header",0,amx_newActionHeader,amx_setActionResponseHeader,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/response",0,amx_newPageActionResponse,amx_setPageActionResponseBody,amx_addPageActionResponse, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/oidcProvider",0,NULL,amx_setPageActionOidcProvider,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/relyingParty",0,NULL,amx_setPageActionRelyingParty,NULL, &tmp);
 			
 		//path mapping stuff
 		xc_addXPathHandler(xCore,"/oidcConfig/locations/location",0,amx_newPathMapping,NULL,amx_addPathMapping, &tmp);

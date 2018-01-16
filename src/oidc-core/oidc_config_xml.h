@@ -25,8 +25,9 @@
 		array_header* responseHeaders;		// array of action_header_xml*
 		array_header* requestHeaders;		// array of action_header_xml*
 		action_response_xml* response;		// custom response		
-		char* uri;
-		int isDebug:1, isForward:1,isPermanent:1,advancedTemplate:1,isLoginRedirect:1;
+		char* uri, *oidcProvider, *relyingParty;
+		int type;
+		int isDebug:1, isForward:1,isPermanent:1,advancedTemplate:1;
 	}page_action_xml;
 	
 	typedef struct pathmapping_action_xml{
@@ -42,6 +43,7 @@
 	}path_mapping_xml;
 
 	typedef struct relying_party_xml{
+		char* id;
 		char* description;
 		char *clientID;
 		char* clientSecret;
@@ -51,6 +53,7 @@
 	}relying_party_xml;
 
 	typedef struct oidc_provider_xml{
+		char* id;
 		char* metadataUrl;
 		char* issuer;
 		char* authorizationEndpoint;

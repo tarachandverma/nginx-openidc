@@ -26,7 +26,9 @@
 		ret->match_lists=shapr_hash_make(sheap);
 		ret->templateEngine=NULL;
 		ret->relyingPartyHash=shapr_hash_make(sheap);
+		ret->relyingPartyIdsHash=shapr_hash_make(sheap);
 		ret->oidcProviderHash=shapr_hash_make(sheap);
+		ret->oidcProviderIdsHash=shapr_hash_make(sheap);
 		ret->oidcProvider=NULL;
 		return ret;		
 	}
@@ -40,7 +42,7 @@
 		ret->description=NULL;
 		ret->isForward=0;
 		ret->isPermanent=0;
-		ret->isLoginRedirect=0;
+		ret->type=action_authorize;
 		ret->isDebug=0;
 		ret->templateEngineRef=NULL;
 		ret->advancedTemplate=FALSE;
@@ -48,6 +50,8 @@
 		ret->responseHeaders=NULL;
 		ret->response=NULL;		
 		ret->uri=NULL;
+		ret->oidcProvider=NULL;
+		ret->relyingParty=NULL;
 		return ret;	
 	}
 	
@@ -153,7 +157,7 @@
 				//transfer details
 				paction->isForward=pax->isForward;
 				paction->isPermanent=pax->isPermanent;
-				paction->isLoginRedirect=pax->isLoginRedirect;
+				paction->type=pax->type;
 				paction->advancedTemplate=pax->advancedTemplate;
 				paction->id=shdata_32BitString_copy(sheap,pax->id);
 				paction->description=shdata_32BitString_copy(sheap,pax->description);
@@ -164,7 +168,8 @@
 				paction->responseHeaders=am_copyActionHeaders(p,sheap,pax->responseHeaders,matchLists);
 				paction->response=am_copyActionResponse(sheap,pax->response);
 				paction->uri=shdata_32BitString_copy(sheap,pax->uri);
-				
+				paction->oidcProvider=shdata_32BitString_copy(sheap,pax->oidcProvider);
+				paction->relyingParty=shdata_32BitString_copy(sheap,pax->relyingParty);
 				shapr_hash_set(sheap,hash,pax->id,APR_HASH_KEY_STRING,paction);
 			}
 		}
@@ -271,7 +276,7 @@
 	}
 
 	
-	static path_mapping* am_buildMapping(shared_heap* sheap,oidc_config* actmap, char* regex, int ignoreCase, array_header* pmactionsX, array_header* matchlists){
+	static path_mapping* am_buildMapping(shared_heap* sheap,oidc_config* actmap, path_mapping_xml* pathX){
 		path_mapping* ret=NULL;
 		int i=0;
 		char* match=NULL;
@@ -279,29 +284,29 @@
 		pathmapping_action_xml* pmaX;
 		pathmapping_action* pma,**pos;
 		
-		if(pmactionsX==NULL||pmactionsX->nelts<0){
+		if(pathX==NULL||pathX->postAuthActions==NULL||pathX->postAuthActions->nelts<0){
 			return NULL;
 		}
 		ret=(path_mapping*)shdata_shpalloc(sheap,sizeof(path_mapping));
-		ret->pathRegex=shdata_32BitString_copy(sheap,regex);
-		ret->ignoreCase=ignoreCase;
+		ret->pathRegex=shdata_32BitString_copy(sheap,pathX->pathRegex);
+		ret->ignoreCase=pathX->ignoreCase;
 		
-		ret->pmactions=shapr_array_make(sheap,pmactionsX->nelts,sizeof(pathmapping_action*));
-		for(i=0;i<pmactionsX->nelts;i++){
-			pmaX=(pathmapping_action_xml*)cu_getElement(pmactionsX,i);
+		ret->pmactions=shapr_array_make(sheap,pathX->postAuthActions->nelts,sizeof(pathmapping_action*));
+		for(i=0;i<pathX->postAuthActions->nelts;i++){
+			pmaX=(pathmapping_action_xml*)cu_getElement(pathX->postAuthActions,i);
 			pma=am_getPathMappingAction(sheap,actmap,pmaX);	
 			pos=shapr_array_push(sheap,ret->pmactions);
 			*pos=pma;
 		}
 		
-		if(matchlists==NULL){
+		if(pathX->matchLists==NULL){
 			ret->matchLists=NULL;
 		}else{
-			ret->matchLists=shapr_array_make(sheap,matchlists->nelts,sizeof(match_list*));
+			ret->matchLists=shapr_array_make(sheap,pathX->matchLists->nelts,sizeof(match_list*));
 			
 			//added linked match lists
-			for(i=0;i<matchlists->nelts;i++){
-				match=(char*)cu_getElement(matchlists,i);
+			for(i=0;i<pathX->matchLists->nelts;i++){
+				match=(char*)cu_getElement(pathX->matchLists,i);
 				mlist=shapr_hash_get(actmap->match_lists,match,APR_HASH_KEY_STRING);
 				if(mlist!=NULL){
 					mlistPos=(match_list**)shapr_array_push(sheap,ret->matchLists);
@@ -323,6 +328,7 @@
 	static relying_party* am_newRelyingParty(shared_heap* sheap){
 		relying_party* ret=NULL;
 		ret=(relying_party*)shdata_shpalloc(sheap,sizeof(relying_party));
+		ret->id=NULL;
 		ret->clientID=NULL;
 		ret->clientSecret=NULL;
 		ret->description=NULL;
@@ -331,27 +337,29 @@
 		return ret;
 	}
 
-	static char* am_copyRelyingsParties(pool* p,shared_heap* sheap, apr_hash_t* relyingPartyHash,shapr_hash_t* hash){
+	static char* am_copyRelyingsParties(pool* p,shared_heap* sheap, apr_hash_t* relyingPartyHashX, shapr_hash_t* relyingPartyHash, shapr_hash_t* relyingPartyIdsHash){
 		apr_hash_index_t * hi=NULL;
 		void *val=NULL;
 		relying_party_xml* rpX=NULL;
 		relying_party* rp=NULL;
 		int i=0;
 
-		for (hi = apr_hash_first(p,relyingPartyHash); hi; hi = apr_hash_next(hi)) {
+		for (hi = apr_hash_first(p, relyingPartyHashX); hi; hi = apr_hash_next(hi)) {
 			apr_hash_this(hi, NULL, NULL, &val);
 			if(val!=NULL){
 				rpX=(relying_party_xml*)val;
 				rp=am_newRelyingParty(sheap);
 
 				//transfer details
+				rp->id=shdata_32BitString_copy(sheap,rpX->id);
 				rp->clientID=shdata_32BitString_copy(sheap,rpX->clientID);
 				rp->description=shdata_32BitString_copy(sheap,rpX->description);
 				rp->clientSecret=shdata_32BitString_copy(sheap,rpX->clientSecret);
 				rp->issuer=shdata_32BitString_copy(sheap,rpX->issuer);
 				rp->validateNonce = rpX->validateNonce;
 				rp->redirectUri=shdata_32BitString_copy(sheap,rpX->redirectUri);
-				shapr_hash_set(sheap,hash,rp->clientID,APR_HASH_KEY_STRING,rp);
+				shapr_hash_set(sheap,relyingPartyIdsHash,rp->id,APR_HASH_KEY_STRING,rp);
+				shapr_hash_set(sheap,relyingPartyHash,rp->clientID,APR_HASH_KEY_STRING,rp);
 			}
 		}
 		return NULL;
@@ -449,7 +457,7 @@
 		for(x=0;x<axml->path_mappings_arr->nelts;x++){
 			pathx=(path_mapping_xml*)cu_getElement(axml->path_mappings_arr,x);
 			if(pathx->postAuthActions!=NULL&&pathx->postAuthActions->nelts>0){
-				pmap=am_buildMapping(sheap,ret,pathx->pathRegex, pathx->ignoreCase, pathx->postAuthActions,pathx->matchLists);
+				pmap=am_buildMapping(sheap,ret,pathx);
 				if(pmap!=NULL){
 					am_addMapping(sheap,ret->path_mappings->postauth,pmap);	
 				}
@@ -473,6 +481,7 @@
 				// download oidcProvider url and read it.
 				oidcProvider=(oidc_provider*)shdata_shpcalloc(sheap,sizeof(oidc_provider));
 				oidcProvider->isDefault = oidcProviderX->isDefault;
+				oidcProvider->id=shdata_32BitString_copy(sheap,oidcProviderX->id);
 				char* jwksJson = NULL;
 				if(oidcProviderX->metadataUrl!=NULL) {
 					oidcProvider->metadataUrl=shdata_32BitString_copy(sheap,oidcProviderX->metadataUrl);
@@ -581,6 +590,7 @@
 				}
 
 				shapr_hash_set(sheap,ret->oidcProviderHash,oidcProvider->issuer,APR_HASH_KEY_STRING,oidcProvider);
+				shapr_hash_set(sheap,ret->oidcProviderIdsHash,oidcProvider->id,APR_HASH_KEY_STRING,oidcProvider);
 				if(ret->oidcProvider==NULL) { // set the first valid one
 					ret->oidcProvider = oidcProvider;
 				}else if(oidcProvider->isDefault) { // override from default
@@ -594,7 +604,7 @@
 		ret->oidcSession=
 			cookie_cookieShmDup(sheap,axml->oidcSession);
 
-		am_copyRelyingsParties(p, sheap, axml->relyingPartyHash,ret->relyingPartyHash);
+		am_copyRelyingsParties(p, sheap, axml->relyingPartyHash,ret->relyingPartyHash, ret->relyingPartyIdsHash);
 
 		shdata_CloseItemTagWithInfo(sheap,"Action Mappings");
 		apr_pool_destroy(subp);
@@ -1351,11 +1361,19 @@ void am_printAll(pool* p, oidc_config* oidcConfig){
 			printf("\t* %s",key);
 			if(val!=NULL){
 				pa=(page_action*)val;
+
 				if(pa->uri!=NULL){
 					printf(",{uri:%s",pa->uri);
 				}
 				if(pa->handler_internal!=NULL){
 					printf(",handler:%s",pa->handler_internal);
+				}
+				printf(",type=%s",am_getActionTypeStr(pa->type));
+				if(pa->oidcProvider!=NULL){
+					printf(",OidcProvider:%s",pa->oidcProvider);
+				}
+				if(pa->relyingParty!=NULL){
+					printf(",RelyingParty:%s",pa->relyingParty);
 				}
 				printf(", isForward:%d,description:%s}",pa->isForward,pa->description);
 				if(pa->requestHeaders!=NULL&&pa->requestHeaders->nelts>0){
@@ -1389,6 +1407,7 @@ void am_printAll(pool* p, oidc_config* oidcConfig){
 	}
 
 	if(oidcConfig->oidcProvider!=NULL) {
+		printf("ID: %s\r\n",oidcConfig->oidcProvider->id);
 		printf("Metadataurl: %s\r\n",oidcConfig->oidcProvider->metadataUrl);
 		printf("Issuer: %s\r\n",oidcConfig->oidcProvider->authorizationEndpoint);
 		printf("JWKSUri: %s\r\n",oidcConfig->oidcProvider->jwksUri);
@@ -1411,7 +1430,8 @@ void am_printAll(pool* p, oidc_config* oidcConfig){
 		for(hi = shapr_hash_first(p,oidcConfig->relyingPartyHash); hi; hi = shapr_hash_next(hi)){
 			shapr_hash_this(hi, &key, NULL, &val);
 			relying_party* relyingRarty=(relying_party*)val;
-			printf("\t\r\nclientID=%s",relyingRarty->clientID);
+			printf("\t\r\nID=%s",relyingRarty->id);
+			printf("\t\r\n* clientID=%s",relyingRarty->clientID);
 			printf("\t\t\r\n* clientSecret=%s",relyingRarty->clientSecret);
 			printf("\t\t\r\n* description=%s",relyingRarty->description);
 			printf("\r\n");
@@ -1431,6 +1451,13 @@ relying_party* am_getRelyingPartyByClientID(shapr_hash_t* relyingPartyHash, cons
 	if (relyingPartyHash==NULL || clientID==NULL) return NULL;
 
 	return (relying_party*)shapr_hash_get(relyingPartyHash, clientID, APR_HASH_KEY_STRING);
+}
+
+relying_party* am_getRelyingPartyById(shapr_hash_t* relyingPartyIdsHash, const char* id) {
+
+	if (relyingPartyIdsHash==NULL || id==NULL) return NULL;
+
+	return (relying_party*)shapr_hash_get(relyingPartyIdsHash, id, APR_HASH_KEY_STRING);
 }
 
 relying_party* am_getRelyingPartyByRedirectUri(pool*p, shapr_hash_t* relyingPartyHash, const char* currentRedirectUri) {
@@ -1460,4 +1487,24 @@ oidc_provider* am_getOidcProviderByIssuer(shapr_hash_t* oidcProviderHash, const 
 	if (oidcProviderHash==NULL || issuer==NULL) return NULL;
 
 	return (oidc_provider*)shapr_hash_get(oidcProviderHash, issuer, APR_HASH_KEY_STRING);
+}
+
+oidc_provider* am_getOidcProviderById(shapr_hash_t* oidcProviderIdsHash, const char* id) {
+
+	if (oidcProviderIdsHash==NULL || id==NULL) return NULL;
+
+	return (oidc_provider*)shapr_hash_get(oidcProviderIdsHash, id, APR_HASH_KEY_STRING);
+}
+
+const char* am_getActionTypeStr(action_types type) {
+	printf("YYYYYYYYYYYYY=%d", type);
+	if (type==action_login)
+		return "login";
+    else if (type==action_denial)
+		return "denial";
+    else if (type==action_authorize)
+		return "authorize";
+    else if (type==action_callback)
+		return "callback";
+	return "null";
 }
