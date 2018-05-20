@@ -52,6 +52,7 @@
 		ret->uri=NULL;
 		ret->oidcProvider=NULL;
 		ret->relyingParty=NULL;
+		ret->base64UrlEncodeState=1;
 		return ret;	
 	}
 	
@@ -170,6 +171,7 @@
 				paction->uri=shdata_32BitString_copy(sheap,pax->uri);
 				paction->oidcProvider=shdata_32BitString_copy(sheap,pax->oidcProvider);
 				paction->relyingParty=shdata_32BitString_copy(sheap,pax->relyingParty);
+				paction->base64UrlEncodeState=pax->base64UrlEncodeState;
 				shapr_hash_set(sheap,hash,pax->id,APR_HASH_KEY_STRING,paction);
 			}
 		}
@@ -334,6 +336,7 @@
 		ret->description=NULL;
 		ret->issuer=NULL;
 		ret->redirectUri=NULL;
+		ret->postLoginDefaultLandingPage=NULL;
 		return ret;
 	}
 
@@ -358,6 +361,7 @@
 				rp->issuer=shdata_32BitString_copy(sheap,rpX->issuer);
 				rp->validateNonce = rpX->validateNonce;
 				rp->redirectUri=shdata_32BitString_copy(sheap,rpX->redirectUri);
+				rp->postLoginDefaultLandingPage=shdata_32BitString_copy(sheap,rpX->postLoginDefaultLandingPage);
 				shapr_hash_set(sheap,relyingPartyIdsHash,rp->id,APR_HASH_KEY_STRING,rp);
 				shapr_hash_set(sheap,relyingPartyHash,rp->clientID,APR_HASH_KEY_STRING,rp);
 			}
@@ -603,6 +607,8 @@
 			cookie_cookieShmDup(sheap,axml->rpSession);
 		ret->oidcSession=
 			cookie_cookieShmDup(sheap,axml->oidcSession);
+		ret->accessToken=
+			cookie_cookieShmDup(sheap,axml->accessToken);
 
 		am_copyRelyingsParties(p, sheap, axml->relyingPartyHash,ret->relyingPartyHash, ret->relyingPartyIdsHash);
 

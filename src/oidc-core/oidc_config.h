@@ -96,7 +96,7 @@
 		action_response* response;		
 		char* uri, *oidcProvider, *relyingParty;
 		int type;
-		unsigned int isForward:1,isPermanent:1,isDebug:1, advancedTemplate:1;
+		unsigned int isForward:1,isPermanent:1,isDebug:1, advancedTemplate:1,base64UrlEncodeState:1;
 	}page_action;
 
 	typedef struct pathmapping_action{
@@ -123,6 +123,7 @@
 		char* issuer;
 		int	validateNonce;
 		char* redirectUri;
+		char* postLoginDefaultLandingPage;
 	}relying_party;
 	
 	typedef struct oidc_providerl{
@@ -143,6 +144,7 @@
 		template_engine* templateEngine;
 		Cookie*	 rpSession;
 		Cookie*	 oidcSession;
+		Cookie*	 accessToken;
 		shapr_hash_t* relyingPartyHash;
 		shapr_hash_t* relyingPartyIdsHash;
 		shapr_hash_t* oidcProviderHash;

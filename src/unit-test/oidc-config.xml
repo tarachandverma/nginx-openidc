@@ -23,7 +23,8 @@
 	 
 	 <rpSession name="rp_session" lifetime="30"  httpOnly="true" />
  	 <oidcSession name="oidc_session" lifetime="2"  httpOnly="true" />
-	 	 
+ 	 <accessToken name="access_token" lifetime="2"  httpOnly="true" />
+ 	 	 	 
      <oidcActions>
  
 		<!-- nginx oidc internal verification handlers for what's configuration params are loaded in memory -->

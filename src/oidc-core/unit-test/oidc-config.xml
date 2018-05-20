@@ -3,7 +3,7 @@
 	<!-- OpenID-Connect Provider metadata url -->
 	 <oidcProviders>	
 	 	<!-- first one is default if default is not set with isDefault=true attribute --> 
-		 <oidcProvider issuer="https://accounts.google.com" >
+		 <oidcProvider id="google" issuer="https://accounts.google.com" >
 		 	<!--metadataUrl>https://accounts.google.com/.well-known/openid-configuration</metadataUrl-->
 		 	<authorizationEndpoint>https://accounts.google.com/o/oauth2/v2/auth</authorizationEndpoint>
 		 	<tokenEndpoint>https://www.googleapis.com/oauth2/v4/token</tokenEndpoint>
@@ -13,16 +13,18 @@
 	 
 	<!-- relying parties configuration for callback handling -->
 	 <relyingParties>
-	 	<relyingParty clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" validateNonce="true">
+	 	<relyingParty id="demo-client" clientID="282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com" clientSecret="QKpg7dmTXPCG0aPPziDbfIJ8" validateNonce="true">
 	 		<description>nginx oidc demo</description>
 	 		<redirectUri>http://ngx-oidc-demo.com/oauth2/callback</redirectUri>
-	 		<issuer>https://accounts.google.com</issuer> 		
+	 		<issuer>https://accounts.google.com</issuer>
+			<postLoginDefaultLandingPage>http://ngx-oidc-demo.com/default-landing-page</postLoginDefaultLandingPage>
 	 	</relyingParty>
 	 </relyingParties>
 	 <!-- end of relying parties configuration -->
 	 
 	 <rpSession name="rp_session" lifetime="30"  httpOnly="true" />
  	 <oidcSession name="oidc_session" lifetime="2"  httpOnly="true" />
+ 	 <accessToken name="access_token" lifetime="2"  httpOnly="true" /> 	 
 	 	 
      <oidcActions>
  
@@ -36,14 +38,21 @@
 	    <action id="oidc_index"><handler>oidc_index</handler></action>
 	    
 	    <!-- post auth phase id_token validation actions -->
-		<action id="oidc-login">
+		<action id="oidc-login" type="login">
 		    <description>oidc login</description>
-			<isLoginRedirect>true</isLoginRedirect>
+			<base64UrlEncodeState>true</base64UrlEncodeState>
 		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback]]></uri>
 		</action>
+		<action id="oidc-callback" type="callback">
+		    <description>oidc login</description>
+		    <isForward>true</isForward>		    
+			<oidcProvider>google</oidcProvider>
+			<relyingParty>demo-client</relyingParty>			    
+		    <uri>/internal/oauth2/token</uri><!-- upstream proxy to google token endpoint -->
+		</action>		
 		<action id="oidc-login-strip-invalid-token"><!-- strip id_token from outgoig request -->
 		    <description>oidc login</description>
-		    <isLoginRedirect>true</isLoginRedirect>
+			<base64UrlEncodeState>true</base64UrlEncodeState>		    
 		    <uri><![CDATA[https://accounts.google.com/o/oauth2/v2/auth?response_type=code&scope=email+openid&client_id=282412598309-545pvmsh9r23f4k1o7267744s59sod6v.apps.googleusercontent.com&redirect_uri=http://ngx-oidc-demo.com/oauth2/callback]]></uri>
 		</action>
 		<action id="oidc_show_error">
@@ -110,6 +119,9 @@
         <!-- end of JWT authorization rules -->
         
         <!-- redirect_uri aka callback handling -->
+	    <location path="^/oauth2/callback\?(.*)code=">
+			<oidcAction>oidc-callback</oidcAction>
+	    </location>        
 	    <location path="^/oauth2/callback\?(.*)error=">
 			<oidcAction>oidc_show_error</oidcAction>			
 	    </location>

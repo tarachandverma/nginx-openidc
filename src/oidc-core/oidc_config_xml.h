@@ -27,7 +27,7 @@
 		action_response_xml* response;		// custom response		
 		char* uri, *oidcProvider, *relyingParty;
 		int type;
-		int isDebug:1, isForward:1,isPermanent:1,advancedTemplate:1;
+		int isDebug:1, isForward:1,isPermanent:1,advancedTemplate:1,base64UrlEncodeState:1;
 	}page_action_xml;
 	
 	typedef struct pathmapping_action_xml{
@@ -50,6 +50,8 @@
 		char* issuer;
 		int 	validateNonce;
 		char* redirectUri;
+		char* postLoginDefaultLandingPage;
+		int setCurrentPageAsState;
 	}relying_party_xml;
 
 	typedef struct oidc_provider_xml{
@@ -70,6 +72,7 @@
 		array_header* match_list_arr;
 		Cookie*				rpSession;
 		Cookie*				oidcSession;
+		Cookie*				accessToken;
 		apr_hash_t* relyingPartyHash;
 		array_header* oidcProviders;
 	}oidc_config_xml;

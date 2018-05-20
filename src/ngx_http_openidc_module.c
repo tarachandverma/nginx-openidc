@@ -1343,12 +1343,12 @@ static int ngx_http_openidc_execPageAction(ngx_http_openidc_request_t *r, page_a
 
 //		AP_LOG_ERROR(r,"ngx_http_openidc_execPageAction");
 	if(paction!=NULL){
-		
-			if(paction->isDebug==1){
-				char buf[256];
-				if(gethostname(buf,256)==0){
-		 			apr_table_add(r->headers_out,"X-DEBUG-BOX-IDENT",apr_pstrdup(r->pool,buf));
-				}   				
+
+		if(paction->isDebug==1){
+			char buf[256];
+			if(gethostname(buf,256)==0){
+				apr_table_add(r->headers_out,"X-DEBUG-BOX-IDENT",apr_pstrdup(r->pool,buf));
+			}
 		}
 		
 		if (paction->requestHeaders!=NULL) {
@@ -1363,10 +1363,20 @@ static int ngx_http_openidc_execPageAction(ngx_http_openidc_request_t *r, page_a
 		if(paction->type==action_callback) {
 			// send to target url if found in state
 			uri_components *url = &r->parsed_uri;
+
 			char* state = url_getParam(r->pool, url->query, "state");
-			if(state!=NULL) {
-				return ngx_http_openidc_execUri(r, state, FALSE, FALSE, NULL);
+			if(state!=NULL&&strstr(state, "http")==0) {
+				unsigned char base64UrlDecoded[4096];
+				memset(base64UrlDecoded,'\0',4096);
+				base64Url_decode(base64UrlDecoded, state, strlen(state));
+				state = base64UrlDecoded;
 			}
+			if(state==NULL || (state!=NULL&&strstr(state, "http")==0)) {
+				char* scheme=(char*)apr_table_get(r->headers_in, "X-Forwarded-Proto");
+				if(scheme==NULL) { scheme=(char*)apr_table_get(r->headers_in, "X-REQUEST-SCHEME"); }
+				state=apr_pstrcat(r->pool, scheme,"://", r->hostname, NULL);
+			}
+			return ngx_http_openidc_execUri(r, state, FALSE, FALSE, NULL);
 		}
 
 		if(paction->uri!=NULL){
@@ -1391,7 +1401,15 @@ static int ngx_http_openidc_execPageAction(ngx_http_openidc_request_t *r, page_a
 			}
 
 			if(paction->type==action_login){
-				destUri = apr_pstrcat(r->pool, destUri, "&state=", url_encode2(r->pool, originUri), "&nonce=", apr_table_get(r->headers_in, OIDC_RP_SESSIONID), NULL);
+				destUri = apr_pstrcat(r->pool, destUri, "&nonce=", apr_table_get(r->headers_in, OIDC_RP_SESSIONID), NULL);
+				if(paction->base64UrlEncodeState) {
+					unsigned char base64UrlEncoded[4096];
+					memset(base64UrlEncoded,'\0',4096);
+					base64Url_encode(base64UrlEncoded, originUri, strlen(originUri));
+					destUri = apr_pstrcat(r->pool, destUri, "&state=", base64UrlEncoded, NULL);
+				}else {
+					destUri = apr_pstrcat(r->pool, destUri, "&state=", url_encode2(r->pool, originUri), NULL);
+				}
 			}
 
 			if (paction->responseHeaders!=NULL) {
@@ -2182,6 +2200,9 @@ static void rewrite_pageaction_displayAll(ngx_http_openidc_request_t *r,page_act
 		if(pa->advancedTemplate==TRUE){
 			ngx_http_openidc_rprintf(r,"<tr><td>&nbsp;</td><td>advancedTemplate: true</td></tr>");
 		}
+		if(pa->base64UrlEncodeState==TRUE){
+			ngx_http_openidc_rprintf(r,"<tr><td>&nbsp;</td><td>base64UrlEncodeState: true</td></tr>");
+		}
 		if(pa->requestHeaders!=NULL){
 			ngx_http_openidc_rprintf1(r,"<tr><td>&nbsp;</td><td>RequestHeaders[%d]</td></tr>",pa->requestHeaders->nelts);
 			for(i=0; i<pa->requestHeaders->nelts; i++){
@@ -2558,10 +2579,11 @@ static void authzoidc_displayRelyingParties(ngx_http_openidc_request_t *r, shapr
 					ngx_http_openidc_rprintf1(r,"<tr><td><font color='black'><strong>id</strong></font><td>%s</td></td></tr>", relyingParty->id);
 					ngx_http_openidc_rprintf1(r,"<tr><td>Description</td><td>%s</td></tr>",relyingParty->description);
 					ngx_http_openidc_rprintf1(r,"<tr><td>ClientID</td><td>%s</td></tr>",relyingParty->clientID);
-					ngx_http_openidc_rprintf1(r,"<tr><td>ClientSecret</td><td>%s</td></tr>",relyingParty->clientSecret);
+					ngx_http_openidc_rprintf1(r,"<tr><td>ClientSecret</td><td>********</td></tr>",relyingParty->clientSecret);
 					ngx_http_openidc_rprintf1(r,"<tr><td>RedirectUri</td><td>%s</td></tr>",relyingParty->redirectUri);
 					ngx_http_openidc_rprintf1(r,"<tr><td>Issuer</td><td>%s</td></tr>",relyingParty->issuer);
 					ngx_http_openidc_rprintf1(r,"<tr><td>ValidateNonce</td><td>%s</td></tr>",BOOLTOSTR(relyingParty->validateNonce));
+					ngx_http_openidc_rprintf1(r,"<tr><td>PostLoginDefaultLandingPage</td><td>%s</td></tr>",relyingParty->postLoginDefaultLandingPage);
 				}
 			  ngx_http_openidc_rputs("</td></tr>",r);
 		   }
@@ -2599,6 +2621,9 @@ static void authzoidc_displayRelyingParties(ngx_http_openidc_request_t *r, shapr
 	ngx_http_openidc_rprintf(r,"<TABLE><tr><td><font color='black'><strong>Session</strong></font></td></tr>");
 	ngx_http_openidc_rprintf2(r,"<tr><td>RelyingParty</td><td>name=%s</td><td>expiry(days)=%d</td></tr>",actm->rpSession->name, actm->rpSession->age);
 	ngx_http_openidc_rprintf2(r,"<tr><td>OIDCProvider</td><td>name=%s</td><td>expiry(days)=%d</td></tr></TABLE>",actm->oidcSession->name, actm->oidcSession->age);
+	if(actm->accessToken) {
+		ngx_http_openidc_rprintf2(r,"<tr><td>AccessTokenCookie</td><td>name=%s</td><td>expiry(days)=%d</td></tr>",actm->accessToken->name, actm->accessToken->age);
+	}
 
 	authzoidc_displayTemplateEngine(r,actm->templateEngine);
 	
@@ -2996,6 +3021,19 @@ static ngx_int_t ngx_http_openidc_preAuthorize(ngx_http_openidc_request_t* r, Co
 						char* id_token = JSON_GetStringFromStringItem(idTokenObj);
 						if(id_token!=NULL) {
 							apr_table_set(r->headers_in, "Authorization", apr_pstrcat(r->pool, "Bearer ", id_token, NULL));
+						}
+					}
+					// set access_token as cookie
+					if(oidcConfig!=NULL&&oidcConfig->accessToken!=NULL) {
+						Value* accessTokenObj = JSON_GetObjectItem(json, "access_token");
+						if(accessTokenObj!=NULL) {
+							char* access_token = JSON_GetStringFromStringItem(accessTokenObj);
+							if(access_token!=NULL) {
+								char* cookieDrop=cookie_cookieTemplate(r->pool, oidcConfig->accessToken, access_token, NULL);
+								if(cookieDrop!=NULL){
+									apr_table_add(r->headers_out, "Set-Cookie", cookieDrop);
+								}
+							}
 						}
 					}
 				}

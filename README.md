@@ -278,7 +278,7 @@ openid-connect configuration : oidc-conf.xml
     	    <description>describe what action does in few words</description> <!-- string -->
             <isForward>true/false</isForward> <!-- boolean set it to true if its internal redirect, false for 302 redirect, default value true -->
             <isPermanent>true/false</isPermanent> <!-- boolean, set it to true if permanent redirect 301 -->
-            <isLoginRedirect>true/false</isLoginRedirect> <!-- boolean, set it to true if redirect to OP in initial authentication request -->            
+            <base64UrlEncodeState>true/false</base64UrlEncodeState> <!-- boolean, set it to true if you want to base64encode current url instead of urlEncode passed in state -->            
             <regex>$$regex-to-generate-tokens-to-build-below-url$$</regex> <!-- string -->
             <advancedTemplate>true/false</advancedTemplate> <!-- string, set to true of below url is dynamically generated using cookie, request headers -->
             <uri>$$target-path1</uri> <!-- string, specify relative url if internal redirect or full path if external redirect 302 -->

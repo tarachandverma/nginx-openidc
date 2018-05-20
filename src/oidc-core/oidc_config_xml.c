@@ -46,6 +46,7 @@
 		cookie_setCookieName(p, ret->oidcSession, (char*)"oidc_session");
 		ret->relyingPartyHash=apr_hash_make (p);
 		ret->oidcProviders=apr_array_make (p,CONST_INIT_OIDC_PROVIDERS_ELTS,sizeof(oidc_provider_xml*));
+		ret->accessToken=NULL;
 		return ret;
 	}
 	static void amx_printPathMappingMatchList(pool* p, array_header* arr){
@@ -161,6 +162,7 @@
 				printf("\t\t\r\n* clientSecret=%s",relyingRarty->clientSecret);
 				printf("\t\t\r\n* description=%s",relyingRarty->description);
 				printf("\t\t\r\n* issuer=%s",relyingRarty->issuer);
+				printf("\t\t\r\n* postLoginDefaultLandingPage=%s",relyingRarty->postLoginDefaultLandingPage);
 				printf("\r\n");
 			}
 		}
@@ -307,6 +309,12 @@
 		actmap_tmp* ctmp=(actmap_tmp*)userdata;
 		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
 		pa->advancedTemplate=STRTOBOOL(body);
+		return 1;
+	}
+	static int amx_setPageActionBase64UrlEncodeState(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		page_action_xml* pa=(page_action_xml*)ctmp->tmp;
+		pa->base64UrlEncodeState=STRTOBOOL(body);
 		return 1;
 	}
 	static int amx_addPageAction(pool* p,char* xPath,int type,void* userdata){
@@ -844,6 +852,27 @@
 		return 1;
 	}
 
+	static int cc_setACCAccessTokenCookieAttributes(pool* p,char* xPath,int type,const char ** attributes,void* userdata){
+		int i;
+		actmap_tmp* stmp=(actmap_tmp*)userdata;
+		oidc_config_xml* conf=(oidc_config_xml*)stmp->conf;
+		conf->accessToken = cookie_newObj(p);
+		cookie_setCookieName(p, conf->accessToken, (char*)"access_token");
+		for (i = 0; attributes[i]; i += 2) {
+			if(strcmp(attributes[i],"name")==0){
+				cookie_setCookieName(p, conf->accessToken,(char*)attributes[i + 1]);
+			}else if(strcmp(attributes[i],"lifetime")==0){
+				cookie_setCookieLifeTime(conf->accessToken,atoi(attributes[i + 1]));
+			}else if(strcmp(attributes[i],"httpOnly")==0){
+				cookie_setCookieHttpOnlyflag(conf->accessToken,STRTOBOOL(attributes[i + 1]));
+			}else if(strcmp(attributes[i],"secureHttpOnly")==0){
+				cookie_setCookieSecureHttpOnlyflag(conf->accessToken,
+						STRTOBOOL(attributes[i + 1]));
+			}
+  		}
+		return 1;
+	}
+
 	static relying_party_xml* amx_newRelyingPartyXml(pool* p){
 		relying_party_xml* ret;
 		ret=apr_palloc(p,sizeof(relying_party_xml));
@@ -854,6 +883,7 @@
 		ret->validateNonce=TRUE;
 		ret->redirectUri=NULL;
 		ret->id=NULL;
+		ret->postLoginDefaultLandingPage=NULL;
 		return ret;
 	}
 
@@ -944,7 +974,14 @@
 		}
 		return 1;
 	}
-
+	static int amx_setRelyingPartyPostLoginDefaultLandingPage(pool* p,char* xPath,int type,const char *body,void* userdata){
+		actmap_tmp* ctmp=(actmap_tmp*)userdata;
+		relying_party_xml* rpX=(relying_party_xml*)ctmp->tmp14;
+		if(rpX!=NULL&&rpX->postLoginDefaultLandingPage==NULL){
+			rpX->postLoginDefaultLandingPage=apr_pstrdup(p,body);
+		}
+		return 1;
+	}
 	static oidc_provider_xml* amx_newOIDCProviderXml(pool* p){
 		oidc_provider_xml* ret;
 		ret=apr_pcalloc(p,sizeof(oidc_provider_xml));
@@ -1082,6 +1119,7 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/response",0,amx_newPageActionResponse,amx_setPageActionResponseBody,amx_addPageActionResponse, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/oidcProvider",0,NULL,amx_setPageActionOidcProvider,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/relyingParty",0,NULL,amx_setPageActionRelyingParty,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/oidcActions/action/base64UrlEncodeState",0,NULL,amx_setPageActionBase64UrlEncodeState,NULL, &tmp);
 			
 		//path mapping stuff
 		xc_addXPathHandler(xCore,"/oidcConfig/locations/location",0,amx_newPathMapping,NULL,amx_addPathMapping, &tmp);
@@ -1100,6 +1138,7 @@
 				
 		xc_addXPathHandler(xCore,"/oidcConfig/rpSession",0,cc_setACCSessionCookieAttributes,NULL,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcSession",0,cc_setACCPermCookieAttributes,NULL,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/accessToken",0,cc_setACCAccessTokenCookieAttributes,NULL,NULL, &tmp);
 
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties",0,amx_defaultRelyingParty,NULL,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty",0,amx_newRelyingParty,NULL,amx_addRelyingParty, &tmp);
@@ -1109,6 +1148,7 @@
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/issuer",0,NULL,amx_setRelyingPartyIssuer,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/validateNonce",0,NULL,amx_setRelyingPartyValidateNonce,NULL, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/redirectUri",0,NULL,amx_setRelyingPartyRedirectUri,NULL, &tmp);
+		xc_addXPathHandler(xCore,"/oidcConfig/relyingParties/relyingParty/postLoginDefaultLandingPage",0,NULL,amx_setRelyingPartyPostLoginDefaultLandingPage,NULL, &tmp);
 
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider",0,amx_newOIDCProvider,NULL,amx_addOIDCProvider, &tmp);
 		xc_addXPathHandler(xCore,"/oidcConfig/oidcProviders/oidcProvider/metadataUrl",0,NULL,amx_setOIDCProviderMetadataUrl,NULL, &tmp);
