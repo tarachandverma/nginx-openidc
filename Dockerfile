@@ -23,7 +23,6 @@ COPY test-conf/oidc-config.xml /usr/local/nginx/conf/
 
 # copy oidc source and nginx source to docker for compilation
 COPY src /src
-COPY nginx-1.8.0.tar.gz /
 
 # copy scripts
 ADD *.sh /

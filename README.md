@@ -60,9 +60,9 @@ Supported platforms
 ``````````
 git clone https://github.com/tarachandverma/nginx-openidc.git
 cd nginx-openidc
-wget 'http://nginx.org/download/nginx-1.8.0.tar.gz'
-tar -xzvf nginx-1.8.0.tar.gz
-cd nginx-1.8.0/
+wget 'http://nginx.org/download/nginx-1.14.0.tar.gz'
+tar -xzvf nginx-1.14.0.tar.gz
+cd nginx-1.14.0/
 
  # Here we assume you would install you nginx under /opt/nginx/.
  ./configure --add-module=../src --with-http_ssl_module
@@ -154,7 +154,7 @@ How to enable ngx openid-connect : nginx.conf
 http {
 
 	...
-	OPENIDC_HomeDir                        /opt/nginx-1.8.0/conf/oidc;
+	OPENIDC_HomeDir                        /usr/local/nginx/conf;
 	OPENIDC_LogFile                        oidc-refresh.log;
 	OPENIDC_SharedMemory  file=/config.shm size=61000;
 	OPENIDC_RemotePath uri=https://raw.githubusercontent.com/tarachandverma/nginx-openidc/master/example-conf/;

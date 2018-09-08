@@ -2532,7 +2532,7 @@ static void authzoidc_displayOidcProviders(ngx_http_openidc_request_t *r, shapr_
 	void* val=NULL;
 	unsigned int cnt=0;
 
-	if(oidcProviderHash==NULL) return NULL;
+	if(oidcProviderHash==NULL) return;
 
 	ngx_http_openidc_rputs("<TABLE>",r);
 	cnt=shapr_hash_count(oidcProviderHash);
@@ -2565,7 +2565,7 @@ static void authzoidc_displayRelyingParties(ngx_http_openidc_request_t *r, shapr
 	void* val=NULL;
 	unsigned int cnt=0;
 
-	if(relyingPartyHash==NULL) return NULL;
+	if(relyingPartyHash==NULL) return;
 
 	ngx_http_openidc_rputs("<TABLE>",r);
 	cnt=shapr_hash_count(relyingPartyHash);
