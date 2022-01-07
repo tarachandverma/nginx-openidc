@@ -388,6 +388,10 @@ Diagnostics
 -  	Startup log - <homeDir>/oidc-refresh.log
 
 
+Related open source (OpenID connect Provider)
+---------------------------------------------
+https://github.com/tarachandverma/easy-oidc-provider
+	
 Authors
 -------
 
